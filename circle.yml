@@ -11,7 +11,7 @@ dependencies:
         - echo "~/postgrest postgres://apiuser:apiuserpwd@localhost:5432/test --pool=200 --anonymous=apiuser --port=3000 --jwt-secret notverysecret --max-rows=500 --schema=v1" > ~/postgrest-run.sh && chmod a+x ~/postgrest-run.sh 
 database:
     override:
-        - sudo -u postgres psql -c "create role apiuser password apiuserpwd;'
+        - sudo -u postgres psql -c "create role apiuser password 'apiuserpwd';"
         - sudo -u postgres psql -c "create database test;"
         - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyA84X5d-Okix0wV8FNmcHJCRntG_wFlKqY';"
         - sudo -u postgres psql test -c "create extension if not exists plsh;"
