@@ -1,11 +1,12 @@
 create extension plsh;
 
-create or replace function urlencode(in_str text) returns text as $$
-declare                                                                                                                                                                                              _i      int4;
+create or replace function urlencode(in_str text, out _result text) returns text as $$
+declare
+    _i      int4;
     _temp   varchar;
     _ascii  int4;
 begin
-    _result = '';
+    _result := '';
     for _i in 1 .. length(in_str) loop
         _temp := substr(in_str, _i, 1);
         if _temp ~ '[0-9a-za-z:/@._?#-]+' then
