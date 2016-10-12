@@ -42,7 +42,7 @@ create table public.google_translate(
 
 comment on table google_translate is 'Cache for Google Translate API calls';
 
-REATE OR REPLACE FUNCTION public._google_translate_curl(text, char(2), char(2), text) RETURNS json AS $$
+CREATE OR REPLACE FUNCTION public._google_translate_curl(text, char(2), char(2), text) RETURNS json AS $$
 #!/bin/sh
 curl -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
 $$ LANGUAGE plsh;
