@@ -1,0 +1,12 @@
+machine:
+    services:
+        - postgresql
+dependencies:
+    post:
+        - sudo sudo apt-get update && sudo apt-get install postgresql-contrib-9.5 postgresql-9.5-plsh
+        - sudo -u postgres psql -f ~/postgrest-google-translate/install.sql
+        - sudo sh -c "echo \"port = 5432\" >> /etc/postgresql/9.5/main/postgresql.conf"
+        - sudo service postgresql restart
+test:
+    override:
+        - true
