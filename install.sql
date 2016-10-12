@@ -1,9 +1,8 @@
 create extension if not exists plsh;
 
 create schema google_translate;
-set search_path to google_translate;
 
-create or replace function urlencode(in_str text, out _result text) returns text as $$
+create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
 declare
     _i      int4;
     _temp   varchar;
@@ -34,7 +33,7 @@ begin
 end;
 $$ language plpgsql;
 
-create table cache(
+create table google_translate.cache(
     source char(2) not null,
     target char(2) not null,
     q text not null,
@@ -43,14 +42,14 @@ create table cache(
     primary key(q, source, target)
 );
 
-comment on table cache is 'Cache for Google Translate API calls';
+comment on table google_translate.cache is 'Cache for Google Translate API calls';
 
-create or replace function _translate_curl(text, char(2), char(2), text) returns json as $$
+create or replace function google_translate._translate_curl(text, char(2), char(2), text) returns json as $$
 #!/bin/sh
-curl -h "accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
+curl -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
 $$ language plsh;
 
-create or replace function translate(api_key text, source char(2), target char(2), q text) returns text as $$
+create or replace function google_translate.translate(api_key text, source char(2), target char(2), q text) returns text as $$
 declare
     qtrimmed text;
     response json;
@@ -73,7 +72,7 @@ begin
         res := response->'data'->'translations'->0->'translatedText'::text;
         res := regexp_replace(res, '"$|^"', '', 'g');
         if res <> '' then
-            insert into public.translate(source, target, q, result)
+            insert into google_translate.cache(source, target, q, result)
                 values(translate.source, translate.target, qtrimmed, res);
         end if;
     end if;
@@ -82,4 +81,3 @@ begin
 end;
 $$ language plpgsql;
 
-set search_path to default;
