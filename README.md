@@ -38,5 +38,12 @@ psql dbname -c 'drop extension plsh;'
 Usage
 ---
 In SQL environment:
+```sql
+-- Translate 'Hello world' from English to Russian
+SELECT google_translate('en', 'ru', 'Hello world'); 
 ```
-SELECT google_translate('');
+
+REST API:
+```sh
+curl -X POST -H "Content-Type: application/json" -H "Cache-Control: no-cache" -d '{"source": "en", "target": "ru", "q": "Hello world"}' "http://localhost:3000/rpc/google_translate"
+```
