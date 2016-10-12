@@ -8,4 +8,7 @@ dependencies:
         - sudo -u postgres psql test -f ~/postgrest-google-translate/install.sql
         - sudo sh -c "echo \"port = 5432\" >> /etc/postgresql/9.5/main/postgresql.conf"
         - sudo service postgresql restart
+test:
+    override:
+        - ~/postgrest-google-translate/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
 
