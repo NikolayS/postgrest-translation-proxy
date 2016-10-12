@@ -4,6 +4,9 @@ create schema v1;
 
 create or replace function v1.google_translate(source char(2), target char(2), q text) returns text as $$
     select * from google_translate.translate(source, target, q);
-$$ language sql;
+$$ language sql security invoker;
+
+grant usage on schema v1 to apiuser;
+grant execute on function v1.google_translate to apiuser;
 
 commit;

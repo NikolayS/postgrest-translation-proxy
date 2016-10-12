@@ -77,7 +77,8 @@ begin
             res := regexp_replace(res, '"$|^"', '', 'g');
             if res <> '' then
                 insert into google_translate.cache(source, target, q, result)
-                    values(translate.source, translate.target, qtrimmed, res);
+                    values(translate.source, translate.target, qtrimmed, res)
+                on conflict do nothing;
             else
                 raise exception 'Cannot parase Google API''s response properly';
             end if;
