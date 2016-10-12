@@ -4,12 +4,20 @@ machine:
 dependencies:
     post:
         - sudo sudo apt-get update && sudo apt-get install postgresql-contrib-9.5 postgresql-9.5-plsh
+        - sudo sh -c "echo \"port = 5432\" >> /etc/postgresql/9.5/main/postgresql.conf"
+        - sudo service postgresql restart
+        - wget https://github.com/begriffs/postgrest/releases/download/v0.3.2.0/postgrest-0.3.2.0-ubuntu.tar.xz
+        - tar xf postgrest-0.3.2.0-ubuntu.tar.xz
+        - echo "~/postgrest postgres://apiuser:apiuserpwd@localhost:5432/test --pool=200 --anonymous=apiuser --port=3000 --jwt-secret notverysecret --max-rows=500 --schema=v1" > ~/postgrest-run.sh && chmod a+x ~/postgrest-run.sh 
+database:
+    override:
+        - sudo -u postgres psql -c "create role apiuser password apiuserpwd;'
         - sudo -u postgres psql -c "create database test;"
         - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyA84X5d-Okix0wV8FNmcHJCRntG_wFlKqY';"
         - sudo -u postgres psql test -c "create extension if not exists plsh;"
         - sudo -u postgres psql test -f ~/postgrest-google-translate/install.sql
-        - sudo sh -c "echo \"port = 5432\" >> /etc/postgresql/9.5/main/postgresql.conf"
-        - sudo service postgresql restart
+        - ~/postgrest-run.sh:
+            background: true 
 test:
     override:
         - ~/postgrest-google-translate/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
