@@ -1,6 +1,9 @@
 machine:
     services:
         - postgresql
+checkout:
+    post:
+        - true
 dependencies:
     post:
         - sudo sudo apt-get update && sudo apt-get install postgresql-contrib-9.5 postgresql-9.5-plsh
