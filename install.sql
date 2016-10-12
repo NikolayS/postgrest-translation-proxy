@@ -1,4 +1,4 @@
-create extension if not exists plsh;
+begin;
 
 create schema google_translate;
 
@@ -16,7 +16,7 @@ begin
         else
             _ascii := ascii(_temp);
             if _ascii > x'07ff'::int4 then
-                raise exception 'won''t deal with 3 (or more) byte sequences.';
+                raise exception 'Won''t deal with 3 (or more) byte sequences.';
             end if;
             if _ascii <= x'07f'::int4 then
                 _temp := '%'||to_hex(_ascii);
@@ -81,3 +81,13 @@ begin
 end;
 $$ language plpgsql;
 
+create or replace function google_translate.translate(source char(2), target char(2), q text) returns text as $$
+begin
+    if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
+        raise exception 'Configuration error: google_translate.api_key has not been set';
+    end if;
+    return google_translate.translate(current_setting('google_translate.api_key')::text, source, target, q);
+end;
+$$ language plpgsql;
+
+commit;

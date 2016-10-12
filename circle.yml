@@ -4,7 +4,9 @@ machine:
 dependencies:
     post:
         - sudo sudo apt-get update && sudo apt-get install postgresql-contrib-9.5 postgresql-9.5-plsh
-        - sudo -u postgres psql -c 'create database test;'
+        - sudo -u postgres psql -c "create database test;"
+        - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyA84X5d-Okix0wV8FNmcHJCRntG_wFlKqY';"
+        - sudo -u postgres psql test -c "create extension if not exists plsh;"
         - sudo -u postgres psql test -f ~/postgrest-google-translate/install.sql
         - sudo sh -c "echo \"port = 5432\" >> /etc/postgresql/9.5/main/postgresql.conf"
         - sudo service postgresql restart
