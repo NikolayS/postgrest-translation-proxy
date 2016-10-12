@@ -11,4 +11,5 @@ dependencies:
 test:
     override:
         - ~/postgrest-google-translate/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
+        - sudo -u postgres psql test -f ~/postgrest-google-translate/uninstall.sql
 
