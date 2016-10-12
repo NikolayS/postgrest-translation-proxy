@@ -2,8 +2,9 @@
 PostgrREST proxy to Google Translate API, with cache. Allows to work with Google Translate from Postgres.
 
 This tiny project consists of 2 parts:
- - 1) SQL objects to enable calling Google API right from SQL environment (uses [plsh](https://github.com/petere/plsh) extension)
- - 2) API method (uses [PostgREST](http://postgrest.com))
+
+1. SQL objects to enable calling Google API right from SQL environment (uses [plsh](https://github.com/petere/plsh) extension)
+2. API method (uses [PostgREST](http://postgrest.com))
 
 Part (1) can be used without part (2).
 
