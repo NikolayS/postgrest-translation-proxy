@@ -39,7 +39,7 @@ do
     casename=$(echo "$f" | sed s/\.sh// | sed s%"$path/cases/"%%)
     #echo "Processing test case: \"$casename\""
     #$f
-    result=$(diff -iw "$path/cases/$casename.expected" <($f ))
+    result=$(diff -iw "$path/cases/$casename.expected" <($f 2>/dev/null))
     if [ "$result" != "" ]
     then
         let "failed++"

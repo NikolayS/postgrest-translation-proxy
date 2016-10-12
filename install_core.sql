@@ -67,7 +67,7 @@ begin
         and gt.q = qtrimmed;
 
     if not found then
-        raise notice 'Calling Google Translate API for source=%, target=%, q=%...', source, target, left(qtrimmed, 15);
+        raise info 'Calling Google Translate API for source=%, target=%, q=%...', source, target, left(qtrimmed, 15);
         select into response google_translate._translate_curl(api_key, source, target, google_translate.urlencode(qtrimmed));
         if response->'error'->'message' is not null then
             raise exception 'Google API responded with error: %', response->'error'->'message'::text
