@@ -1,0 +1,45 @@
+{
+	"variables": [],
+	"info": {
+		"name": "postgrest-google-translate",
+		"_postman_id": "e63f8e17-395a-7452-ccd0-c64b981a8b21",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/google_translate",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\ntests[\"Body matches string\"] = responseBody.has(\"Golden Cloud\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{test_user_jwt}}",
+						"description": ""
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\": \"ru\", \"target\": \"en\", \"q\": \"ночевала тучка золотая на груди утёса-великана\"}"
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
