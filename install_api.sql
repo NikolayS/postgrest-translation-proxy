@@ -7,6 +7,6 @@ create or replace function v1.google_translate(source char(2), target char(2), q
 $$ language sql security invoker;
 
 grant usage on schema v1 to apiuser;
-grant execute on function v1.google_translate to apiuser;
+grant execute on function v1.google_translate(char, char, text) to apiuser;
 
 commit;
