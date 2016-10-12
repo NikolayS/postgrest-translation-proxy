@@ -1,3 +1,3 @@
 #!/bin/bash
 
-psql -U postgres test -c "select urlencode('hello world');"
+psql -U postgres test -c "select google_translate.urlencode('hello world');"

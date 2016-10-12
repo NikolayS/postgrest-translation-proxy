@@ -1,4 +1,7 @@
-create extension plsh;
+create extension if not exists plsh;
+
+create schema google_translate;
+set search_path to google_translate;
 
 create or replace function urlencode(in_str text, out _result text) returns text as $$
 declare
@@ -31,7 +34,7 @@ begin
 end;
 $$ language plpgsql;
 
-create table public.google_translate(
+create table cache(
     source char(2) not null,
     target char(2) not null,
     q text not null,
@@ -40,13 +43,43 @@ create table public.google_translate(
     primary key(q, source, target)
 );
 
-comment on table google_translate is 'Cache for Google Translate API calls';
+comment on table cache is 'Cache for Google Translate API calls';
 
-CREATE OR REPLACE FUNCTION public._google_translate_curl(text, char(2), char(2), text) RETURNS json AS $$
+create or replace function _translate_curl(text, char(2), char(2), text) returns json as $$
 #!/bin/sh
-curl -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
-$$ LANGUAGE plsh;
+curl -h "accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
+$$ language plsh;
 
+create or replace function translate(api_key text, source char(2), target char(2), q text) returns text as $$
+declare
+    qtrimmed text;
+    response json;
+    res text;
+begin
+    qtrimmed = trim(translate.q);
+    res := null;
+    select into res 
+        result
+    from 
+        google_translate.translate gt
+    where 
+        gt.source = translate.source
+        and gt.target = translate.target
+        and gt.q = qtrimmed;
 
+    if not found then
+        raise notice 'Calling Google Translate API for source=%, target=%, q=%...', source, target, left(qtrimmed, 15);
+        select into response google_translate._translate_curl(api_key, source, target, google_translate.urlencode(qtrimmed));
+        res := response->'data'->'translations'->0->'translatedText'::text;
+        res := regexp_replace(res, '"$|^"', '', 'g');
+        if res <> '' then
+            insert into public.translate(source, target, q, result)
+                values(translate.source, translate.target, qtrimmed, res);
+        end if;
+    end if;
 
+    return res;
+end;
+$$ language plpgsql;
 
+set search_path to default;
