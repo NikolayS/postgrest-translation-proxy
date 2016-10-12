@@ -69,11 +69,20 @@ begin
     if not found then
         raise notice 'Calling Google Translate API for source=%, target=%, q=%...', source, target, left(qtrimmed, 15);
         select into response google_translate._translate_curl(api_key, source, target, google_translate.urlencode(qtrimmed));
-        res := response->'data'->'translations'->0->'translatedText'::text;
-        res := regexp_replace(res, '"$|^"', '', 'g');
-        if res <> '' then
-            insert into google_translate.cache(source, target, q, result)
-                values(translate.source, translate.target, qtrimmed, res);
+        if response->'error'->'message' is not null then
+            raise exception 'Google API responded with error: %', response->'error'->'message'::text
+                using detail = jsonb_pretty((response->'error'->'errors')::jsonb);
+        elsif response->'data'->'translations'->0->'translatedText' is not null then
+            res := response->'data'->'translations'->0->'translatedText'::text;
+            res := regexp_replace(res, '"$|^"', '', 'g');
+            if res <> '' then
+                insert into google_translate.cache(source, target, q, result)
+                    values(translate.source, translate.target, qtrimmed, res);
+            else
+                raise exception 'Cannot parase Google API''s response properly';
+            end if;
+        else 
+            raise exception 'Cannot parase Google API''s response properly';
         end if;
     end if;
 
