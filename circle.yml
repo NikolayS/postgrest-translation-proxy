@@ -7,6 +7,4 @@ dependencies:
         - sudo -u postgres psql -f ~/postgrest-google-translate/install.sql
         - sudo sh -c "echo \"port = 5432\" >> /etc/postgresql/9.5/main/postgresql.conf"
         - sudo service postgresql restart
-test:
-    override:
-        - true
+
