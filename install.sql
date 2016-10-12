@@ -61,7 +61,7 @@ begin
     select into res 
         result
     from 
-        google_translate.translate gt
+        google_translate.cache gt
     where 
         gt.source = translate.source
         and gt.target = translate.target
