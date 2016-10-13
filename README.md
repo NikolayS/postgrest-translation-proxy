@@ -26,7 +26,7 @@ Dependencies
 
 Installation
 ---
-For your database (here we assume that it's called `dbname`), install [plsh](https://github.com/petere/plsh extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
+For your database (here we assume that it's called `dbname`), install [plsh](https://github.com/petere/plsh) extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
 ```sh
 psql dbname -c 'create extension if not exists plsh;'
 psql dbname -f install_core.sql
