@@ -14,7 +14,7 @@ Table `google_translate.cache` is used to cache Google API responses to speedup 
 ---
 In general, the idea to call external things (even pretty predictable and fast like Google API) might introduce significant limitations to capability to scale for your master. However, this project shows how powerful PostgreSQL is: you don't need to use PHP/Python/Java/Ruby to work with external JSON API.
 
-To make it scalable, one could run PostgREST on multiple slave nodes to aboid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
+To make it scalable, one could run PostgREST on multiple slave nodes to avoid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
 
 Installation
 ---
