@@ -22,7 +22,7 @@ Dependencies
 ---
 1. cURL
 2. [PostgREST](http://postgrest.com) – download the latest version. See `circle.yml` for example of starting/using it.
-2. `plsh` – PostgreSQL extension, included to standard contribs package (install using `apt-get install postgresql-contrib-X.X` or `yum install ...`)
+2. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version)
 
 Installation
 ---
