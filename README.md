@@ -1,7 +1,7 @@
 # postgrest-google-translate
 PostgreSQL/PostgrREST proxy to Google Translate API, with caching. It allows to work with Google Translate API right from Postgres or via REST API calls.
 
-[![Build Status](https://circleci.com/gh/NikolayS/postgrest-google-translate.png?style=shield&circle-token=4b432d1b67214fd02a74294cb4c11ca482313d25)](https://circleci.com/gh/NikolayS/postgrest-google-translate/tree/master)
+[![Build Status](https://circleci.com/gh/NikolayS/postgrest-google-translate.png?style=shield&circle-token=fb58aee6e9f98cf85d08c4d382d5ba3f0f548e08)](https://circleci.com/gh/NikolayS/postgrest-google-translate/tree/master)
 
 This tiny project consists of 2 parts:
 
