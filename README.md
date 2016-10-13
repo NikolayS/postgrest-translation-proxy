@@ -18,6 +18,12 @@ In general, the idea to call external things (even pretty predictable and fast l
 
 To make it scalable, one could run PostgREST on multiple slave nodes to avoid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
 
+Dependencies
+---
+1. cURL
+2. [PostgREST](http://postgrest.com) – download the latest version. See `circle.yml` for example of starting/using it.
+2. `plsh` – PostgreSQL extension, included to standard contribs package (install using `apt-get install postgresql-contrib-X.X` or `yum install ...`)
+
 Installation
 ---
 For your database (here we assume that it's called `dbname`), install [plsh](https://github.com/petere/plsh extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
