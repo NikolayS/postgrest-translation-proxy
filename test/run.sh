@@ -38,7 +38,7 @@ for f in $(ls "$path/cases/"*.sh)
 do
     casename=$(echo "$f" | sed s/\.sh// | sed s%"$path/cases/"%%)
     #echo "Processing test case: \"$casename\""
-    #$f
+    touch "$path/cases/$casename.expected" # if it doesn't exist, create it
     result=$(diff -iw "$path/cases/$casename.expected" <($f 2>/dev/null))
     if [ "$result" != "" ]
     then
