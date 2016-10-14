@@ -140,7 +140,6 @@ create or replace function google_translate.translate(source char(2), target cha
 declare
     res text[];
 begin
-raise notice 'TEXT-TYPED q: %', q;
     if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
         raise exception 'Configuration error: google_translate.api_key has not been set';
     end if;
@@ -151,14 +150,19 @@ raise notice 'TEXT-TYPED q: %', q;
 end;
 $$ language plpgsql;
 
-create or replace function google_translate.translate(source char(2), target char(2), q json) returns text[] as $$
+create or replace function google_translate.translate_array(source char(2), target char(2), q json) returns text[] as $$
 declare
     res text[];
     qs text[];
+    jtype text;
 begin
-raise notice 'JSON-TYPED q: %', q;
     if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
         raise exception 'Configuration error: google_translate.api_key has not been set';
+    end if;
+    jtype := json_typeof(q)::text;
+
+    if jtype <> 'array' then
+        raise exception 'Unsupported format of JSON unput';
     end if;
 
     select into qs array(select * from json_array_elements_text(q));
