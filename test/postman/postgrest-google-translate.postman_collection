@@ -23,6 +23,11 @@
 				"method": "POST",
 				"header": [
 					{
+						"key": "Authorization",
+						"value": "Bearer {{test_user_jwt}}",
+						"description": ""
+					},
+					{
 						"key": "Content-Type",
 						"value": "application/json",
 						"description": ""
@@ -31,6 +36,35 @@
 				"body": {
 					"mode": "raw",
 					"raw": "{\"source\": \"ru\", \"target\": \"en\", \"q\": \"ночевала тучка золотая на груди утёса-великана\"}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "/google_translate - multiphrase",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\ntests[\"Body matches string\"] = responseBody.has(\"компьютер\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate_array",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\": \"en\", \"target\": \"ru\", \"q\": [\"ok computer\", \"hello world\"]}"
 				},
 				"description": ""
 			},
