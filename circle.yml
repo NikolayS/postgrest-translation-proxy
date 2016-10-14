@@ -8,11 +8,11 @@ dependencies:
         - sudo service postgresql restart
         - cd ~ && wget https://github.com/begriffs/postgrest/releases/download/v0.3.2.0/postgrest-0.3.2.0-ubuntu.tar.xz
         - cd ~ && tar xf postgrest-0.3.2.0-ubuntu.tar.xz
-        - echo "~/postgrest postgres://apiuser:apiuserpwd@localhost:5432/test --pool=200 --anonymous=apiuser --port=3000 --jwt-secret notverysecret --max-rows=500 --schema=v1" > ~/postgrest-run.sh && chmod a+x ~/postgrest-run.sh
+        - echo "~/postgrest postgres://apiuser:SOMEPASSWORD@localhost:5432/test --pool=200 --anonymous=apiuser --port=3000 --jwt-secret notverysecret --max-rows=500 --schema=v1" > ~/postgrest-run.sh && chmod a+x ~/postgrest-run.sh
         - npm install -g npm newman ava 
 database:
     override:
-        - sudo -u postgres psql -c "create role apiuser password 'apiuserpwd' login;"
+        - sudo -u postgres psql -c "create role apiuser password 'SOMEPASSWORD' login;"
         - sudo -u postgres psql -c "create database test;"
         - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyA84X5d-Okix0wV8FNmcHJCRntG_wFlKqY';"
         - sudo -u postgres psql test -c "create extension if not exists plsh;"
