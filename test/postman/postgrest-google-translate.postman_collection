@@ -8,7 +8,7 @@
 	},
 	"item": [
 		{
-			"name": "/google_translate",
+			"name": "/rpc/google_translate",
 			"event": [
 				{
 					"listen": "test",
@@ -42,7 +42,7 @@
 			"response": []
 		},
 		{
-			"name": "/google_translate - multiphrase",
+			"name": "/rpc/google_translate_array - multiphrase",
 			"event": [
 				{
 					"listen": "test",
