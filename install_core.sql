@@ -1,5 +1,3 @@
-begin;
-
 create schema google_translate;
 
 create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
@@ -149,5 +147,3 @@ begin
     return res[1];
 end;
 $$ language plpgsql;
-
-commit;
