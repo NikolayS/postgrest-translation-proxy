@@ -150,7 +150,7 @@ begin
 end;
 $$ language plpgsql;
 
-create or replace function google_translate.translate(source char(2), target char(2), q json) returns text as $$
+create or replace function google_translate.translate(source char(2), target char(2), q json) returns text[] as $$
 declare
     res text[];
     qs text[];
