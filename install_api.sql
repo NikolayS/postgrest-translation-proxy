@@ -22,5 +22,5 @@ create or replace function v1.google_translate(source char(2), target char(2), q
     select * from google_translate.translate(source, target, q);
 $$ language sql security definer;
 
-grant execute on function v1.google_translate(char, char, text[]) to apiuser;
+grant execute on function v1.google_translate(char, char, json) to apiuser;
 grant execute on function v1.google_translate(char, char, text) to apiuser;
