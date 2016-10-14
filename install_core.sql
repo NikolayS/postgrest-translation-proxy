@@ -140,6 +140,7 @@ create or replace function google_translate.translate(source char(2), target cha
 declare
     res text[];
 begin
+raise notice 'TEXT-TYPED q: %', q;
     if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
         raise exception 'Configuration error: google_translate.api_key has not been set';
     end if;
@@ -155,6 +156,7 @@ declare
     res text[];
     qs text[];
 begin
+raise notice 'JSON-TYPED q: %', q;
     if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
         raise exception 'Configuration error: google_translate.api_key has not been set';
     end if;
