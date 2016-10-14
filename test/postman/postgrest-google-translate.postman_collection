@@ -23,11 +23,6 @@
 				"method": "POST",
 				"header": [
 					{
-						"key": "Authorization",
-						"value": "Bearer {{test_user_jwt}}",
-						"description": ""
-					},
-					{
 						"key": "Content-Type",
 						"value": "application/json",
 						"description": ""

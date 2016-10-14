@@ -1,5 +1,7 @@
 # postgrest-google-translate
-PostgrREST proxy to Google Translate API, with cache. Allows to work with Google Translate from Postgres.
+PostgreSQL/PostgrREST proxy to Google Translate API, with caching. It allows to work with Google Translate API right from Postgres or via REST API calls.
+
+[![Build Status](https://circleci.com/gh/NikolayS/postgrest-google-translate.png?style=shield&circle-token=fb58aee6e9f98cf85d08c4d382d5ba3f0f548e08)](https://circleci.com/gh/NikolayS/postgrest-google-translate/tree/master)
 
 This tiny project consists of 2 parts:
 
@@ -14,11 +16,17 @@ Table `google_translate.cache` is used to cache Google API responses to speedup 
 ---
 In general, the idea to call external things (even pretty predictable and fast like Google API) might introduce significant limitations to capability to scale for your master. However, this project shows how powerful PostgreSQL is: you don't need to use PHP/Python/Java/Ruby to work with external JSON API.
 
-To make it scalable, one could run PostgREST on multiple slave nodes to aboid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
+To make it scalable, one could run PostgREST on multiple slave nodes to avoid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
+
+Dependencies
+---
+1. cURL
+2. [PostgREST](http://postgrest.com) – download the latest version. See `circle.yml` for example of starting/using it.
+2. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version)
 
 Installation
 ---
-For your database (here we assume that it's called `dbname`), install [plsh](https://github.com/petere/plsh extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
+For your database (here we assume that it's called `dbname`), install [plsh](https://github.com/petere/plsh) extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
 ```sh
 psql dbname -c 'create extension if not exists plsh;'
 psql dbname -f install_core.sql
