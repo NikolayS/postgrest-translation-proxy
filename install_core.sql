@@ -131,6 +131,7 @@ begin
     if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
         raise exception 'Configuration error: google_translate.api_key has not been set';
     end if;
+
     return google_translate.translate(current_setting('google_translate.api_key')::text, source, target, qs);
 end;
 $$ language plpgsql;
@@ -144,6 +145,25 @@ begin
     end if;
     select into res translate
     from google_translate.translate(current_setting('google_translate.api_key')::text, source, target, ARRAY[q]);
+
+    return res[1];
+end;
+$$ language plpgsql;
+
+create or replace function google_translate.translate(source char(2), target char(2), q json) returns text as $$
+declare
+    res text[];
+    qs text[];
+begin
+    if current_setting('google_translate.api_key') is null or current_setting('google_translate.api_key') = '' then
+        raise exception 'Configuration error: google_translate.api_key has not been set';
+    end if;
+
+    select into qs array(select * from json_array_elements_text(q));
+
+    select into res translate
+    from google_translate.translate(current_setting('google_translate.api_key')::text, source, target, qs);
+
     return res[1];
 end;
 $$ language plpgsql;

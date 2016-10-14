@@ -14,7 +14,7 @@ $$;
 
 grant usage on schema v1 to apiuser;
 
-create or replace function v1.google_translate(source char(2), target char(2), q text[]) returns text[] as $$
+create or replace function v1.google_translate(source char(2), target char(2), q json) returns text[] as $$
     select * from google_translate.translate(source, target, q);
 $$ language sql security definer;
 
