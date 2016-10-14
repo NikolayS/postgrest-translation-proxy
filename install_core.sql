@@ -164,6 +164,6 @@ begin
     select into res translate
     from google_translate.translate(current_setting('google_translate.api_key')::text, source, target, qs);
 
-    return res[];
+    return res;
 end;
 $$ language plpgsql;
