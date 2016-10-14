@@ -1,5 +1,5 @@
 # postgrest-google-translate
-PostgreSQL/PostgrREST proxy to Google Translate API, with caching. It allows to work with Google Translate API right from Postgres or via REST API calls.
+PostgreSQL/PostgrREST proxy to Google Translate API, with caching and ability to use multiple phrases in one call. It allows to work with Google Translate API right from Postgres or via REST API calls.
 
 [![Build Status](https://circleci.com/gh/NikolayS/postgrest-google-translate.png?style=shield&circle-token=fb58aee6e9f98cf85d08c4d382d5ba3f0f548e08)](https://circleci.com/gh/NikolayS/postgrest-google-translate/tree/master)
 
@@ -26,12 +26,12 @@ Dependencies
 
 Installation
 ---
-For your database (here we assume that it's called `dbname`), install [plsh](https://github.com/petere/plsh) extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
+For your database (here we assume that it's called `DBNAME`), install [plsh](https://github.com/petere/plsh) extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
 ```sh
-psql dbname -c 'create extension if not exists plsh;'
-psql dbname -f install_core.sql
-psql dbname -f install_api.sql
-psql -c "alter dbname set google_translate.api_key = 'YOU_GOOGLE_API_KEY';"
+psql DBNAME -c 'create extension if not exists plsh;'
+psql DBNAME -f install_core.sql
+psql DBNAME -f install_api.sql
+psql -c "alter DBNAME set google_translate.api_key = 'YOU_GOOGLE_API_KEY';"
 ```
 
 Alternatively, you can use `ALTER ROLE ... SET google_translate.api_key = 'YOU_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` (in these cases, it will be available cluster-wide).
@@ -39,9 +39,9 @@ Alternatively, you can use `ALTER ROLE ... SET google_translate.api_key = 'YOU_G
 Uninstallation
 ---
 ```sh
-psql dbname -f uninstall_api.sql
-psql dbname -f uninstall_core.sql
-psql dbname -c 'drop extension plsh;'
+psql DBNAME -f uninstall_api.sql
+psql DBNAME -f uninstall_core.sql
+psql DBNAME -c 'drop extension plsh;'
 ```
 
 Usage
