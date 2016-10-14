@@ -16,7 +16,7 @@ begin
         else
             _ascii := ascii(_temp);
             if _ascii > x'07ff'::int4 then
-                raise exception 'Won''t deal with 3 (or more) byte sequences.';
+                --raise exception 'Won''t deal with 3 (or more) byte sequences.';
             end if;
             if _ascii <= x'07f'::int4 then
                 _temp := '%'||to_hex(_ascii);
