@@ -11,6 +11,7 @@ This tiny project consists of 2 parts:
 Part (1) can be used without part (2).
 
 Table `google_translate.cache` is used to cache Google API responses to speedup work and reduce costs.
+Also, it is possible to combine multiple phrases in one API call, which provides great advantage (e.g.: for 10 uncached phrases, it will be ~150-200ms for single aggregated call versus 1.5-2 seconds of consequent 10 calls).
 
 :warning: Limitations
 ---
@@ -49,7 +50,10 @@ Usage
 In SQL environment:
 ```sql
 -- Translate from English to Russian
-SELECT google_translate('en', 'ru', 'Hello world'); 
+select google_translate.translate('en', 'ru', 'Hello world'); 
+
+-- Multiphrase calls
+select * from google_translate.translate('en', 'ru', array['ok computer', 'show me more','hello world!']);
 ```
 
 REST API:
@@ -58,4 +62,10 @@ curl -X POST -H "Content-Type: application/json" \
     -H "Cache-Control: no-cache" \
     -d '{"source": "en", "target": "ru", "q": "Hello world"}' \
     "http://localhost:3000/rpc/google_translate"
+```
+
+```sh
+curl -X POST -H "Content-Type: application/json" \
+    -H "Cache-Control: no-cache" \
+    -d '{"source": "en", "target": "ru", "q": ["ok computer", "hello world", "yet another phrase]}' "https://localhost:3000/rpc/google_translate_array"
 ```
