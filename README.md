@@ -1,5 +1,5 @@
 # postgrest-google-translate
-PostgreSQL/PostgrREST proxy to Google Translate API, with caching and ability to use multiple phrases in one call. It allows to work with Google Translate API right from Postgres or via REST API calls.
+PostgreSQL/PostgrREST proxy to Google Translate API, with caching and ability to use multiple phrases in one request. It allows to work with Google Translate API right from Postgres or via REST API requests.
 
 [![Build Status](https://circleci.com/gh/NikolayS/postgrest-google-translate.png?style=shield&circle-token=fb58aee6e9f98cf85d08c4d382d5ba3f0f548e08)](https://circleci.com/gh/NikolayS/postgrest-google-translate/tree/master)
 
@@ -11,13 +11,13 @@ This tiny project consists of 2 parts:
 Part (1) can be used without part (2).
 
 Table `google_translate.cache` is used to cache Google API responses to speedup work and reduce costs.
-Also, it is possible to combine multiple phrases in one API call, which provides great advantage (e.g.: for 10 uncached phrases, it will be ~150-200ms for single aggregated call versus 1.5-2 seconds of consequent 10 calls). Currently, Google Translate API accepts up to 128 text segments in a single query.
+Also, it is possible to combine multiple phrases in one API request, which provides great advantage (e.g.: for 10 uncached phrases, it will be ~150-200ms for single aggregated request versus 1.5-2 seconds for 10 consequent requests). Currently, Google Translate API accepts up to 128 text segments in a single request.
 
 :warning: Limitations
 ---
-In general, the idea to call external things (even pretty predictable and fast like Google API) might introduce significant limitations to capability to scale for your master. However, this project shows how powerful PostgreSQL is: you don't need to use PHP/Python/Java/Ruby to work with external JSON API.
+In general, working with external things (even pretty predictable and fast like Google API) might introduce significant limitations to capability to scale for your master. However, this project shows how powerful PostgreSQL is: you don't need to use PHP/Python/Java/Ruby to work with external JSON API.
 
-To make it scalable, one could run PostgREST on multiple slave nodes to avoid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
+To make it scalable, one could run PostgREST on multiple slave nodes to avoid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's writing functions from plpgsql code being executed on slave nodes).
 
 To minimize impact on the master node, it is a good idea to combine multiple text segments in a single request (see examples below).
 
@@ -54,7 +54,7 @@ In SQL environment:
 -- Translate from English to Russian
 select google_translate.translate('en', 'ru', 'Hello world'); 
 
--- Multiphrase calls
+-- Combine multiple text segments in single query
 select * from google_translate.translate('en', 'ru', array['ok computer', 'show me more','hello world!']);
 ```
 
