@@ -69,6 +69,6 @@ curl -X POST -H "Content-Type: application/json" \
 ```sh
 curl -X POST -H "Content-Type: application/json" \
     -H "Cache-Control: no-cache" \
-    -d '{"source": "en", "target": "ru", "q": ["ok computer", "hello world", "yet another phrase]}' \
+    -d '{"source": "en", "target": "ru", "q": ["ok computer", "hello world", "yet another phrase"]}' \
     "https://localhost:3000/rpc/google_translate_array"
 ```
