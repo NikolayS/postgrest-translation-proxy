@@ -19,7 +19,7 @@ In general, the idea to call external things (even pretty predictable and fast l
 
 To make it scalable, one could run PostgREST on multiple slave nodes to avoid this limitations. The ony thing is to think about – writing to `cache` table (TODO: check if it is possible to call master's wrinting functions from plpgsql code being executed on slave nodes).
 
-To minimize impact on the master node, it is a good idea to combine multiple text segmenta in a single request (see examples below).
+To minimize impact on the master node, it is a good idea to combine multiple text segments in a single request (see examples below).
 
 Dependencies
 ---
