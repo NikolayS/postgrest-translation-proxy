@@ -11,7 +11,7 @@ This tiny project consists of 2 parts:
 Part (1) can be used without part (2).
 
 Table `google_translate.cache` is used to cache Google API responses to speedup work and reduce costs.
-Also, it is possible to combine multiple phrases in one API call, which provides great advantage (e.g.: for 10 uncached phrases, it will be ~150-200ms for single aggregated call versus 1.5-2 seconds of consequent 10 calls).
+Also, it is possible to combine multiple phrases in one API call, which provides great advantage (e.g.: for 10 uncached phrases, it will be ~150-200ms for single aggregated call versus 1.5-2 seconds of consequent 10 calls). Currently, Google Translate API accepts up to 128 text segments in a single query.
 
 :warning: Limitations
 ---
