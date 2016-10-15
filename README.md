@@ -38,7 +38,7 @@ psql -c "alter DBNAME set google_translate.api_key = 'YOU_GOOGLE_API_KEY';"
 
 Alternatively, you can use `ALTER ROLE ... SET google_translate.api_key = 'YOU_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` (in these cases, it will be available cluster-wide).
 
-To enable REST API proxy, install [PostgREST](http://postgrest.com), run it (see `cirle.yml` as an example), and initialize API methods with the additional SQL script:
+To enable REST API proxy, install [PostgREST](http://postgrest.com), launch it (see `cirle.yml` as an example), and initialize API methods with the additional SQL script:
 ```sh
 psql DBNAME -f install_api.sql
 ```
