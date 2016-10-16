@@ -21,6 +21,8 @@ To make it scalable, one could run PostgREST on multiple slave nodes to avoid th
 
 To minimize impact on the master node, it is a good idea to combine multiple text segments in a single request (see examples below).
 
+Also it is worth to mention, that due to use of plsh and curl, a separate process (curl) is invoked on each non-cached request. Alternative approach is discussed in the [Issue #3](https://github.com/NikolayS/postgrest-google-translate/issues/3).
+
 Dependencies
 ---
 1. cURL
