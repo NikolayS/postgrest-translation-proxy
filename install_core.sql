@@ -44,7 +44,7 @@ comment on table google_translate.cache is 'Cache for Google Translate API calls
 
 create or replace function google_translate._translate_curl(text, char(2), char(2), text) returns json as $$
 #!/bin/sh
-curl -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
+curl --connect-timeout 2 -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
 $$ language plsh;
 
 create or replace function google_translate.translate(api_key text, source char(2), target char(2), qs text[]) returns text[] as $$
