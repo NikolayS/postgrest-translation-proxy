@@ -6,7 +6,6 @@ declare
     _bi     int4;
     _bires  text;
     _temp   varchar;
-    _ascii  int4;
     _bytestr text;
 begin
     _result := '';
