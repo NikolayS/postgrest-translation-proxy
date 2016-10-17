@@ -64,6 +64,64 @@
 				"description": ""
 			},
 			"response": []
+		},
+		{
+			"name": "/rpc/google_translate_array - emoji",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\ntests[\"Body matches string\"] = responseBody.has(\"📝\");\n\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"JSON is valid\"] = (jsonData && typeof jsonData === \"object\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate_array",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\":\"ru\",\"target\":\"en\",\"q\":[\"Новый Ford Edge\",\"Автомобилистам на заметку\",\"Вид с высоты птичьего полета 2\",\"Проверка перевода\",\"1(**ИНТЕРЕСНО ☺ 📝\",\"01 ВЯЗАНИЕ\",\"Красивая девушка в купальнике\",\"Учительница\",\"Postila сделано с любовью\",\"01 ВЯЗАНИЕ\",\"История PHP: инфографика / Блог компании DataArt / Хабрахабр\"]}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "/rpc/google_translate - emoji",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\ntests[\"Body matches string\"] = responseBody.has(\"📝\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\": \"en\", \"target\": \"ru\", \"q\": \"hello 📝\"}"
+				},
+				"description": ""
+			},
+			"response": []
 		}
 	]
 }
