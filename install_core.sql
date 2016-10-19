@@ -1,30 +1,15 @@
 create schema google_translate;
 
 create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
-declare
-    _i      int4;
-    _bi     int4;
-    _bires  text;
-    _temp   varchar;
-    _bytestr text;
-begin
-    _result := '';
-    for _i in 1 .. length(in_str) loop
-        _temp := substr(in_str, _i, 1);
-        if _temp ~ '[0-9a-za-z:/@._?#-]+' then
-            _result := _result || _temp;
-        else
-            _bytestr := _temp::bytea::text;
-            _bires := '';
-            for _bi in 1 .. bit_length(_temp) / 8 loop
-                _bires :=  _bires || '%' || substring(_bytestr, 1 + _bi * 2, 2);
-            end loop;
-            _result := _result || upper(_bires);
-        end if;
-    end loop;
-    return ;
-end;
-$$ language plpgsql;
+  select string_agg(
+           CASE WHEN ol>1 THEN regexp_replace(UPPER(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
+                          ELSE ch
+           END, ''
+         )
+    from (select ch, octet_length(ch) as ol
+            from regexp_split_to_table($1, '') as ch
+          ) as s;
+$$ language sql immutable strict;
 
 create table google_translate.cache(
     source char(2) not null,
@@ -57,7 +42,7 @@ begin
     qs2call := array[]::text[];
     i2call := array[]::int4[];
     q2call_urlencoded := '';
-    
+
     for rec in
         with subs as (
             select generate_subscripts as i from generate_subscripts(qs, 1)
@@ -65,12 +50,12 @@ begin
             select i, qs[i] as q
             from subs
         )
-        select 
+        select
             queries.i as i,
             result,
             trim(queries.q) as q
-        from 
-            google_translate.cache 
+        from
+            google_translate.cache
         right join queries on trim(queries.q) = cache.q
             and cache.source = translate.source
             and cache.target = translate.target
@@ -84,14 +69,14 @@ begin
             if q2call_urlencoded <> '' then
                 q2call_urlencoded := q2call_urlencoded || '&q=';
             end if;
-            q2call_urlencoded := q2call_urlencoded || google_translate.urlencode(trim(rec.q)); 
+            q2call_urlencoded := q2call_urlencoded || google_translate.urlencode(trim(rec.q));
         end if;
     end loop;
     raise debug 'TO PASS TO GOOGLE API: qs2call: %, i2call: %', array_to_string(qs2call, '*'), array_to_string(i2call, '-');
-    raise debug 'URLENCODED STRING: %', q2call_urlencoded; 
+    raise debug 'URLENCODED STRING: %', q2call_urlencoded;
 
     --return res;
-    
+
     if q2call_urlencoded <> '' then
         raise debug 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         select into response google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
@@ -112,7 +97,7 @@ begin
                 end if;
                 k := k + 1;
             end loop;
-        else 
+        else
             raise exception 'Cannot parase Google API''s response properly';
         end if;
     end if;
