@@ -1,14 +1,18 @@
 create schema google_translate;
 
 create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
-  select string_agg(
-           CASE WHEN ol>1 THEN regexp_replace(UPPER(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
-                          ELSE ch
-           END, ''
-         )
-    from (select ch, octet_length(ch) as ol
-            from regexp_split_to_table($1, '') as ch
-          ) as s;
+    select 
+        string_agg(
+            case 
+                when ol>1 then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
+                else ch
+            end, 
+            ''
+        )
+    from (
+        select ch, octet_length(ch) as ol
+        from regexp_split_to_table($1, '') as ch
+    ) as s;
 $$ language sql immutable strict;
 
 create table google_translate.cache(
