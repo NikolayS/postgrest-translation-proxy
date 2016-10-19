@@ -2,11 +2,11 @@ create schema google_translate;
 
 create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
   select string_agg(
-           CASE WHEN ol>l THEN regexp_replace(UPPER(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
+           CASE WHEN ol>1 THEN regexp_replace(UPPER(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
                           ELSE ch
            END, ''
          )
-    from (select ch, octet_length(ch) as ol, length(ch) as l
+    from (select ch, octet_length(ch) as ol
             from regexp_split_to_table($1, '') as ch
           ) as s;
 $$ language sql immutable strict;
