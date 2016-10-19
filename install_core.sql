@@ -4,7 +4,7 @@ create or replace function google_translate.urlencode(in_str text, out _result t
     select 
         string_agg(
             case 
-                when ol>1 then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
+                when ol>1 or ch !~ '[0-9a-za-z:/@._?#-]+' then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
                 else ch
             end, 
             ''
