@@ -79,8 +79,6 @@ begin
     raise debug 'TO PASS TO GOOGLE API: qs2call: %, i2call: %', array_to_string(qs2call, '*'), array_to_string(i2call, '-');
     raise debug 'URLENCODED STRING: %', q2call_urlencoded;
 
-    --return res;
-
     if q2call_urlencoded <> '' then
         raise debug 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         select into response google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
