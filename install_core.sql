@@ -9,7 +9,7 @@ create or replace function google_translate.urlencode(in_str text, out _result t
     from (select ch, octet_length(ch) as ol, length(ch) as l
             from regexp_split_to_table($1, '') as ch
           ) as s;
-$$ language sql;
+$$ language sql immutable strict;
 
 create table google_translate.cache(
     source char(2) not null,
