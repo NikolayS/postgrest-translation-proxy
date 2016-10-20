@@ -89,7 +89,9 @@ begin
         end if;
         raise debug 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         select into response google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
-        if response->'error'->'message' is not null then
+        if response is null then
+            raise exception 'Google API responded with empty JSON';
+        elsif response->'error'->'message' is not null then
             raise exception 'Google API responded with error: %', response->'error'->'message'::text
                 using detail = jsonb_pretty((response->'error'->'errors')::jsonb);
         elsif response->'data'->'translations'->0->'translatedText' is not null then
@@ -102,12 +104,14 @@ begin
                     values(translate.source, translate.target, qs2call[k], res[i2call[k]])
                     on conflict do nothing;
                 else
-                    raise exception 'Cannot parse Google API''s response properly';
+                    raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
+                        using detail = jsonb_pretty(response::jsonb);
                 end if;
                 k := k + 1;
             end loop;
         else
-            raise exception 'Cannot parase Google API''s response properly';
+            raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
+                using detail = jsonb_pretty(response::jsonb);
         end if;
     end if;
 
