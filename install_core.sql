@@ -48,7 +48,6 @@ create or replace function google_translate.urlencode(text) returns text as $$
     ) as s;
 $$ language sql immutable strict;
 
-
 create table google_translate.cache(
     source char(2) not null,
     target char(2) not null,
@@ -70,6 +69,7 @@ declare
     qs2call text[];
     i2call int4[];
     q2call_urlencoded text;
+    url_len int4;
     response json;
     resp_1 json;
     res text[];
@@ -80,7 +80,7 @@ begin
     qs2call := array[]::text[];
     i2call := array[]::int4[];
     q2call_urlencoded := '';
-    
+
     for rec in
         with subs as (
             select generate_subscripts as i from generate_subscripts(qs, 1)
@@ -88,12 +88,12 @@ begin
             select i, qs[i] as q
             from subs
         )
-        select 
+        select
             queries.i as i,
             result,
             trim(queries.q) as q
-        from 
-            google_translate.cache 
+        from
+            google_translate.cache
         right join queries on trim(queries.q) = cache.q
             and cache.source = translate.source
             and cache.target = translate.target
@@ -107,18 +107,23 @@ begin
             if q2call_urlencoded <> '' then
                 q2call_urlencoded := q2call_urlencoded || '&q=';
             end if;
-            q2call_urlencoded := q2call_urlencoded || google_translate.urlencode(trim(rec.q)); 
+            q2call_urlencoded := q2call_urlencoded || google_translate.urlencode(trim(rec.q));
         end if;
     end loop;
     raise debug 'TO PASS TO GOOGLE API: qs2call: %, i2call: %', array_to_string(qs2call, '*'), array_to_string(i2call, '-');
-    raise debug 'URLENCODED STRING: %', q2call_urlencoded; 
+    raise debug 'URLENCODED STRING: %', q2call_urlencoded;
 
-    --return res;
-    
     if q2call_urlencoded <> '' then
+        url_len := length(q2call_urlencoded);
+        raise debug 'q2call_urlencoded length=%, total URL length=%', url_len, (url_len + 115);
+        if url_len > 1885 then
+            raise exception 'Google API''s character limit (2K) is exceeded, total URL length=%', (url_len + 115);
+        end if;
         raise debug 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         select into response google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
-        if response->'error'->'message' is not null then
+        if response is null then
+            raise exception 'Google API responded with empty JSON';
+        elsif response->'error'->'message' is not null then
             raise exception 'Google API responded with error: %', response->'error'->'message'::text
                 using detail = jsonb_pretty((response->'error'->'errors')::jsonb);
         elsif response->'data'->'translations'->0->'translatedText' is not null then
@@ -131,12 +136,14 @@ begin
                     values(translate.source, translate.target, qs2call[k], res[i2call[k]])
                     on conflict do nothing;
                 else
-                    raise exception 'Cannot parse Google API''s response properly';
+                    raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
+                        using detail = jsonb_pretty(response::jsonb);
                 end if;
                 k := k + 1;
             end loop;
-        else 
-            raise exception 'Cannot parase Google API''s response properly';
+        else
+            raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
+                using detail = jsonb_pretty(response::jsonb);
         end if;
     end if;
 
