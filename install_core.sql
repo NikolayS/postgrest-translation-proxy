@@ -1,30 +1,53 @@
 create schema google_translate;
 
-create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
-declare
-    _i      int4;
-    _bi     int4;
-    _bires  text;
-    _temp   varchar;
-    _bytestr text;
-begin
-    _result := '';
-    for _i in 1 .. length(in_str) loop
-        _temp := substr(in_str, _i, 1);
-        if _temp ~ '[0-9a-za-z:/@._?#-]+' then
-            _result := _result || _temp;
-        else
-            _bytestr := _temp::bytea::text;
-            _bires := '';
-            for _bi in 1 .. bit_length(_temp) / 8 loop
-                _bires :=  _bires || '%' || substring(_bytestr, 1 + _bi * 2, 2);
-            end loop;
-            _result := _result || upper(_bires);
-        end if;
-    end loop;
-    return ;
-end;
-$$ language plpgsql;
+--create or replace function google_translate.urlencode(in_str text, out _result text) returns text as $$
+--declare
+--    _i      int4;
+--    _bi     int4;
+--    _bires  text;
+--    _temp   varchar;
+--    _bytestr text;
+--begin
+--    _result := '';
+--    for _i in 1 .. length(in_str) loop
+--        _temp := substr(in_str, _i, 1);
+--        if _temp ~ '[0-9a-za-z:/@._?#-]+' then
+--            _result := _result || _temp;
+--        else
+--            _bytestr := _temp::bytea::text;
+--            _bires := '';
+--            for _bi in 1 .. bit_length(_temp) / 8 loop
+--                _bires :=  _bires || '%' || substring(_bytestr, 1 + _bi * 2, 2);
+--            end loop;
+--            _result := _result || upper(_bires);
+--        end if;
+--    end loop;
+--    return ;
+--end;
+--$$ language plpgsql;
+
+-- Disclaimer: this urlencode is unusual -- it doesn't touch most chars (incl. multibytes)
+-- to avoid reaching 2K limit for URL in Google API calls.
+-- "Regular" urlencode() with multibyte chars support is shown above (commented out block of code). 
+create or replace function google_translate.urlencode(text) returns text as $$
+    select 
+        string_agg(
+            case
+                when ch = ' ' then 
+                    '+'
+                when ol=1 and ch ~ '[+\]\[%&#]+'  -- this is not traditional urlencode!
+                    then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
+                else 
+                    ch
+            end, 
+            ''
+        )
+    from (
+        select ch, octet_length(ch) as ol
+        from regexp_split_to_table($1, '') as ch
+    ) as s;
+$$ language sql immutable strict;
+
 
 create table google_translate.cache(
     source char(2) not null,
