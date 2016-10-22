@@ -101,6 +101,12 @@ begin
         raise debug 'INTPUT: i: %, q: "%", result found in cache: "%"', rec.i, rec.q, rec.result;
         if rec.result is not null then
             res[rec.i] := rec.result;
+        elsif (current_setting('google_translate.begin_at') is not null 
+                            and current_setting('google_translate.begin_at')::timestamp > current_timestamp
+              ) or (current_setting('google_translate.end_at') is not null
+                            and current_setting('google_translate.end_at')::timestamp < current_timestamp
+              ) then
+            res[rec.i] := rec.q;
         else
             qs2call = array_append(qs2call, trim(rec.q));
             i2call = array_append(i2call, rec.i);
