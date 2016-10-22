@@ -1,5 +1,5 @@
    urlencode   
 ---------------
- hello%20world
+ hello+world
 (1 row)
 
