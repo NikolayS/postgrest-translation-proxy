@@ -122,6 +122,93 @@
 				"description": ""
 			},
 			"response": []
+		},
+		{
+			"name": "/rpc/google_translate_array - HTML entities",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\ntests[\"Body matches string\"] = responseBody.has(\"&quot;\");\n\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"JSON is valid\"] = (jsonData && typeof jsonData === \"object\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate_array",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\":\"ru\",\"target\":\"en\",\"q\":[\"Бутерброд а-ля &quot;Крок Макдо&quot; - кулинарный рецепт\"]}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "/rpc/google_translate_array - \">\" sign",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\n//tests[\"Body matches string\"] = responseBody.has(\">\"); // Google API converts it to &gt; see https://github.com/NikolayS/postgrest-google-translate/issues/10\n\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"JSON is valid\"] = (jsonData && typeof jsonData === \"object\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate_array",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\":\"ru\",\"target\":\"en\",\"q\":[\"строгая и вкусная ссылка –>\"]}"
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "/rpc/google_translate_array -  spec chars",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": "tests[\"Status code is 200\"] = responseCode.code === 200;\n\n\ntests[\"Body has '['\"] = responseBody.has(\"[\");\ntests[\"Body has ']'\"] = responseBody.has(\"]\");\ntests[\"Body has 'Soviet'\"] = responseBody.has(\"Soviet\");\ntests[\"Body has 'Russian'\"] = responseBody.has(\"Russian\");\n\nvar jsonData = JSON.parse(responseBody);\ntests[\"JSON is valid\"] = (jsonData && typeof jsonData === \"object\");"
+					}
+				}
+			],
+			"request": {
+				"url": "{{BASE_URL}}/rpc/google_translate_array",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\"source\":\"ru\",\"target\":\"en\",\"q\":[\"Актёры\",\"Знаменитости   2 часть  [советские , #российские ]\"]}"
+				},
+				"description": ""
+			},
+			"response": []
 		}
 	]
 }
