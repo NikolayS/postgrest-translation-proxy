@@ -40,14 +40,14 @@ psql DBNAME -f install_core.sql
 psql -c "alter DBNAME set google_translate.api_key = 'YOU_GOOGLE_API_KEY';"
 ```
 
-Alternatively, you can use `ALTER ROLE ... SET google_translate.api_key = 'YOU_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` (in these cases, it will be available cluster-wide).
+Alternatively, you can use `ALTER ROLE ... SET google_translate.api_key = 'YOU_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` or do `ALTER SYSTEM SET google_translate.api_key = 'YOU_GOOGLE_API_KEY';` (in these cases, it will be available cluster-wide).
 
 There are also two optional parameters, that allow to use Google Translate API calls in sertain period of time:
 ```
 google_translate.begin_at
 google_translate.end_at
 ```
--- both can be configurate in the same way as `google_translate.api_key`. Values should be timestamp (without timezone, so use default timezone for your Postgres cluster).
+-- both can be configured in the same way as `google_translate.api_key`. Values should be timestamp (without timezone, so use default timezone for your Postgres cluster).
 
 To enable REST API proxy, install [PostgREST](http://postgrest.com), launch it (see `cirle.yml` as an example), and initialize API methods with the additional SQL script:
 ```sh
