@@ -31,7 +31,7 @@ Dependencies
 2. [PostgREST](http://postgrest.com) – download the latest version. See `circle.yml` for example of starting/using it.
 2. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version)
 
-Installation
+Installation and Configuration
 ---
 For your database (here we assume that it's called `DBNAME`), install [plsh](https://github.com/petere/plsh) extension and then execute two SQL scripts, after what configure your database setting `google_translate.api_key` (take it from Google Could Platform Console):
 ```sh
@@ -41,6 +41,13 @@ psql -c "alter DBNAME set google_translate.api_key = 'YOU_GOOGLE_API_KEY';"
 ```
 
 Alternatively, you can use `ALTER ROLE ... SET google_translate.api_key = 'YOU_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` (in these cases, it will be available cluster-wide).
+
+There are also two optional parameters, that allow to use Google Translate API calls in sertain period of time:
+```
+google_translate.begin_at
+google_translate.end_at
+```
+-- both can be configurate in the same way as `google_translate.api_key`. Values should be timestamp (without timezone, so use default timezone for your Postgres cluster).
 
 To enable REST API proxy, install [PostgREST](http://postgrest.com), launch it (see `cirle.yml` as an example), and initialize API methods with the additional SQL script:
 ```sh
