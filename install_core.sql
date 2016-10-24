@@ -81,7 +81,7 @@ begin
             and cache.source = translate.source
             and cache.target = translate.target
     loop
-        raise debug 'INTPUT: i: %, q: "%", result found in cache: "%"', rec.i, rec.q, rec.result;
+        raise debug 'INPUT: i: %, q: "%", result found in cache: "%"', rec.i, rec.q, rec.result;
         if rec.result is not null then
             res[rec.i] := rec.result;
         elsif (current_setting('google_translate.begin_at') is not null 
