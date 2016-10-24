@@ -13,16 +13,18 @@ create schema google_translate;
 -- to avoid reaching 2K limit for URL in Google API calls.
 -- "Regular" urlencode() with multibyte chars support is shown above (commented out block of code). 
 create or replace function google_translate.urlencode(text) returns text as $$
-    select 
+    select
         string_agg(
             case
                 when ascii(ch) in (32, 160) then -- spaces, CR, LF
                     '+'
+                when ascii(ch) between 127 and 165 then -- unsupported chars
+                    '+'
                 when ol=1 and (ch ~ '[+\]\[%&#]+' or ascii(ch) < 32)  -- this is not traditional urlencode!
                     then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
-                else 
+                else
                     ch
-            end, 
+            end,
             ''
         )
     from (
@@ -32,13 +34,15 @@ create or replace function google_translate.urlencode(text) returns text as $$
 $$ language sql immutable strict;
 
 create table google_translate.cache(
+    id bigserial primary key,
     source char(2) not null,
     target char(2) not null,
     q text not null,
     result text not null,
-    created timestamp not null default now(),
-    primary key(q, source, target)
+    created timestamp not null default now()
 );
+create unique index u_cache_q_source_target on google_translate.cache
+    using btree(md5(q), source, target);
 
 comment on table google_translate.cache is 'Cache for Google Translate API calls';
 
@@ -77,7 +81,7 @@ begin
             trim(queries.q) as q
         from
             google_translate.cache
-        right join queries on trim(queries.q) = cache.q
+        right join queries on md5(trim(queries.q)) = md5(cache.q)
             and cache.source = translate.source
             and cache.target = translate.target
     loop
