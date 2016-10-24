@@ -16,7 +16,7 @@ create or replace function google_translate.urlencode(text) returns text as $$
     select 
         string_agg(
             case
-                when ch = ' ' then 
+                when ascii(ch) in (32, 160) then -- space
                     '+'
                 when ol=1 and ch ~ '[+\]\[%&#]+'  -- this is not traditional urlencode!
                     then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
@@ -96,19 +96,20 @@ begin
             if q2call_urlencoded <> '' then
                 q2call_urlencoded := q2call_urlencoded || '&q=';
             end if;
-            q2call_urlencoded := q2call_urlencoded || google_translate.urlencode(trim(rec.q));
+            q2call_urlencoded := q2call_urlencoded || replace(google_translate.urlencode(trim(rec.q)), ' ', '+');
         end if;
     end loop;
     raise debug 'TO PASS TO GOOGLE API: qs2call: %, i2call: %', array_to_string(qs2call, '*'), array_to_string(i2call, '-');
     raise debug 'URLENCODED STRING: %', q2call_urlencoded;
 
     if q2call_urlencoded <> '' then
+        --q2call_urlencoded := replace(q2call_urlencoded, ' ', '+');
         url_len := length(q2call_urlencoded);
         raise debug 'q2call_urlencoded length=%, total URL length=%', url_len, (url_len + 115);
         if url_len > 1885 then
             raise exception 'Google API''s character limit (2K) is exceeded, total URL length=%', (url_len + 115);
         end if;
-        raise debug 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
+        raise info 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         select into response google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
         if response is null then
             raise exception 'Google API responded with empty JSON';
