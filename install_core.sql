@@ -46,7 +46,7 @@ create unique index u_cache_q_source_target on google_translate.cache
 
 comment on table google_translate.cache is 'Cache for Google Translate API calls';
 
-create or replace function google_translate._translate_curl(text, char(2), char(2), text) returns json as $$
+create or replace function google_translate._translate_curl(text, char(2), char(2), text) returns text as $$
 #!/bin/sh
 curl --connect-timeout 2 -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
 $$ language plsh;
@@ -58,10 +58,13 @@ declare
     q2call_urlencoded text;
     url_len int4;
     response json;
+    response_text text;
     resp_1 json;
     res text[];
     k int4;
     rec record;
+    err_state text;
+    err_detail text;
 begin
     res := qs; -- by default, return input "as is"
     qs2call := array[]::text[];
@@ -88,7 +91,7 @@ begin
         raise debug 'INPUT: i: %, q: "%", result found in cache: "%"', rec.i, rec.q, rec.result;
         if rec.result is not null then
             res[rec.i] := rec.result;
-        elsif (current_setting('google_translate.begin_at') is not null 
+        elsif (current_setting('google_translate.begin_at') is not null
                             and current_setting('google_translate.begin_at')::timestamp > current_timestamp
               ) or (current_setting('google_translate.end_at') is not null
                             and current_setting('google_translate.end_at')::timestamp < current_timestamp
@@ -107,14 +110,22 @@ begin
     raise debug 'URLENCODED STRING: %', q2call_urlencoded;
 
     if q2call_urlencoded <> '' then
-        --q2call_urlencoded := replace(q2call_urlencoded, ' ', '+');
         url_len := length(q2call_urlencoded);
         raise debug 'q2call_urlencoded length=%, total URL length=%', url_len, (url_len + 115);
         if url_len > 1885 then
             raise exception 'Google API''s character limit (2K) is exceeded, total URL length=%', (url_len + 115);
         end if;
         raise info 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
-        select into response google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
+        begin
+          select into response_text google_translate._translate_curl(api_key, source, target, q2call_urlencoded);
+          response := response_text::json;
+        exception
+          when invalid_text_representation then -- Google returned text, not JSON
+            get stacked diagnostics err_state = returned_sqlstate, err_detail = pg_exception_detail;
+            raise exception 'Google Translate API returned text, not JSON (see details)'
+              using detail = response_text,
+              hint = 'Google Translate API usually returns text instead of JSON if something is wrong with the request (error 400 "Bad Request").';
+        end;
         if response is null then
             raise exception 'Google API responded with empty JSON';
         elsif response->'error'->'message' is not null then
