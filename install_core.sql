@@ -16,9 +16,9 @@ create or replace function google_translate.urlencode(text) returns text as $$
     select 
         string_agg(
             case
-                when ascii(ch) in (32, 160) then -- space
+                when ascii(ch) in (32, 160) then -- spaces, CR, LF
                     '+'
-                when ol=1 and ch ~ '[+\]\[%&#]+'  -- this is not traditional urlencode!
+                when ol=1 and (ch ~ '[+\]\[%&#]+' or ascii(ch) < 32)  -- this is not traditional urlencode!
                     then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
                 else 
                     ch
