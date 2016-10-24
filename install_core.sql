@@ -63,8 +63,6 @@ declare
     res text[];
     k int4;
     rec record;
-    err_state text;
-    err_detail text;
 begin
     res := qs; -- by default, return input "as is"
     qs2call := array[]::text[];
@@ -121,7 +119,6 @@ begin
           response := response_text::json;
         exception
           when invalid_text_representation then -- Google returned text, not JSON
-            get stacked diagnostics err_state = returned_sqlstate, err_detail = pg_exception_detail;
             raise exception 'Google Translate API returned text, not JSON (see details)'
               using detail = response_text,
               hint = 'Google Translate API usually returns text instead of JSON if something is wrong with the request (error 400 "Bad Request").';
