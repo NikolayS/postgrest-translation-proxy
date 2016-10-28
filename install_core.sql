@@ -68,6 +68,12 @@ begin
     qs2call := array[]::text[];
     i2call := array[]::int4[];
     q2call_urlencoded := '';
+    
+    if source = target then
+        raise exception '''source'' cannot be equal to ''target'' (see details)'
+            using detail = 'Received equal ''source'' and ''target'': ' 
+                || source || ', qs: [' || array_to_string(qs, ';') || ']';
+    end if;
 
     for rec in
         with subs as (
