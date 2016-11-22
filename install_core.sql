@@ -132,7 +132,8 @@ begin
         if response is null then
             raise exception 'Google API responded with empty JSON';
         elsif response->'error'->'message' is not null then
-            raise exception 'Google API responded with error: %', response->'error'->'message'::text
+            raise exception 'Google API responded with error (query: source=%, target=%): %' 
+                , source, target, response->'error'->'message'::text
                 using detail = jsonb_pretty((response->'error'->'errors')::jsonb);
         elsif response->'data'->'translations'->0->'translatedText' is not null then
             k := 1;
