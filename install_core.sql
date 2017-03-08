@@ -1,6 +1,13 @@
 create schema google_translate;
 
---create or replace function public.urlencode(in_str text, out _result text) returns text as $$                                                                                                        select                                                                                                                                                                                               string_agg(                                                                                                                                                                                          case                                                                                                                                                                                                 when ol>1 or ch !~ '[0-9a-za-z:/@._?#-]+'                                                                                                                                                            then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')                                                                                                              else ch                                                                                                                                                                                      end,
+--create or replace function public.urlencode(in_str text, out _result text) returns text as $$
+--  select
+--    string_agg(
+--      case
+--        when ol>1 or ch !~ '[0-9a-za-z:/@._?#-]+'
+--          then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
+--          else ch
+--        end,
 --            ''
 --        )
 --    from (
