@@ -4,7 +4,7 @@ create schema google_translate;
 --  select
 --    string_agg(
 --      case
---        when ol>1 or ch !~ '[0-9a-za-z:/@._?#-]+'
+--        when ol>1 or ch !~ '[0-9a-zA-Z:/@._?#-]+'
 --          then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
 --          else ch
 --        end,
