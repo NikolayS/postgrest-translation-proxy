@@ -14,7 +14,7 @@ database:
     override:
         - sudo -u postgres psql -c "create role apiuser password 'SOMEPASSWORD' login;"
         - sudo -u postgres psql -c "create database test;"
-        - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyA84X5d-Okix0wV8FNmcHJCRntG_wFlKqY';"
+        - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyCauv2HRjprFX3DcGhorJFYGyeVmzvunuc';"
         - sudo -u postgres psql -c "alter database test set google_translate.begin_at = '2000-01-01';"
         - sudo -u postgres psql -c "alter database test set google_translate.end_at = '2100-01-01'"
         - sudo -u postgres psql test -c "create extension if not exists plsh;"
