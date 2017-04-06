@@ -1,1 +1,1 @@
-drop schema google_translate cascade;
+drop schema translation_proxy cascade;
