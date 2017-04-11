@@ -49,6 +49,7 @@ class Setup
     @cfg[:promt][:script].gsub!(/YOUR_PROMT_LOGIN/, @cfg[:promt][:login] )
       .gsub!( /YOUR_PROMT_PASSWORD/, @cfg[:promt][:password] )
       .gsub!( /YOUR_PROMT_SERVER_URL/, @cfg[:promt][:server_url] )
+      .gsub!( /PROMT_LOGIN_TIMEOUT/, @cfg[:promt][:login_timeout] )
     @psql.puts @cfg[:promt][:script]
   end
 

@@ -15,6 +15,7 @@
   :use: true
   :login: startupturbo
   :password: Startupturb0
+  :login_timeout: 30 minutes
   :server_url: http://pts.promt.com/pts/
 :bing:
   :use: false
