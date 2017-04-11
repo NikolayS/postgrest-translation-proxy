@@ -5,7 +5,7 @@ PostgreSQL/PostgREST proxy to Google, Bing and Prompt Translate APIs, with cachi
 
 This tiny project consists of 2 parts:
 
-1. SQL objects to enable calling Google API right from SQL environment (uses [plsh](https://github.com/petere/plsh) extension)
+1. SQL objects to enable calling Translation APIs right from SQL environment (uses [plsh](https://github.com/petere/plsh) extension)
 2. API method (uses [PostgREST](http://postgrest.com))
 
 Part (1) can be used without part (2).
@@ -29,11 +29,20 @@ Dependencies
 ---
 1. cURL
 2. [PostgREST](http://postgrest.com) – download the latest version. See `circle.yml` for example of starting/using it.
-2. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version)
+2. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version). For Archlinux use AUR package 'postgresql-plsh'.
+3. Ruby for easy installer
 
 Installation and Configuration
 ---
-For your database (here we assume that it's called `DBNAME`), install [plsh](https://github.com/petere/plsh) extension and then execute two SQL scripts, after what configure your database setting `translation_proxy.google_api_key` (take it from Google Could Platform Console):
+Simple method
+----
+Edit `setup.yml` then execute `setup.rb`. You need to have the ruby interpreter been installed.
+
+Step-by-step method
+----
+For your database (here we assume that it's called `DBNAME`), install [plsh](https://github.com/petere/plsh) extension and then execute `_core` SQL scripts, after what configure your database settings:
+`translation_proxy.promt_api_key`, `translation_proxy.bing_api_key` and
+`translation_proxy.google_api_key` (take it from Google Could Platform Console):
 ```sh
 psql DBNAME -c 'create extension if not exists plsh;'
 psql DBNAME -f install_core.sql
@@ -41,6 +50,7 @@ psql -c "alter database DBNAME set translation_proxy.google_api_key = 'YOUR_GOOG
 psql -c "alter database DBNAME set translation_proxy.google_begin_at = '2000-01-01';"
 psql -c "alter database DBNAME set translation_proxy.google_end_at = '2100-01-01';"
 ```
+
 
 Alternatively, you can use `ALTER ROLE ... SET translation_proxy.google_api_key = 'YOUR_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` or do `ALTER SYSTEM SET translation_proxy.google_api_key = 'YOUR_GOOGLE_API_KEY';` (in these cases, it will be available cluster-wide).
 
