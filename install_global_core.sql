@@ -8,7 +8,8 @@ create table translation_proxy.cache(
     q text not null,
     result text not null,
     created timestamp not null default now(),
-    api_engine text not null
+    api_engine text not null,
+    engine_data jsonb
 );
 create unique index u_cache_q_source_target on translation_proxy.cache
     using btree(md5(q), source, target);
