@@ -15,6 +15,7 @@
   :use: false
   :login: null
   :password: null
+  :login_timeout: 30 minutes
   :server_url: https://pts.promt.com/pts/
 :bing:
   :use: false
