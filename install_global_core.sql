@@ -1,4 +1,5 @@
 create schema if not exists translation_proxy;
+create extension if not exists plsh;
 
 create table translation_proxy.cache(
     id bigserial primary key,
@@ -7,7 +8,7 @@ create table translation_proxy.cache(
     q text not null,
     result text not null,
     created timestamp not null default now(),
-    api_engine text not null default 'google'
+    api_engine text not null
 );
 create unique index u_cache_q_source_target on translation_proxy.cache
     using btree(md5(q), source, target);

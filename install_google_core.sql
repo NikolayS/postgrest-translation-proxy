@@ -1,4 +1,7 @@
 -- Google API
+alter database DBNAME set translation_proxy.google_api_key = 'YOUR_GOOGLE_API_KEY';
+alter database DBNAME set translation_proxy.google_begin_at = '2000-01-01';
+alter database DBNAME set translation_proxy.google_end_at = '2100-01-01';
 
 create or replace function translation_proxy.urlencode(text) returns text as $$
     select
@@ -20,20 +23,6 @@ create or replace function translation_proxy.urlencode(text) returns text as $$
         from regexp_split_to_table($1, '') as ch
     ) as s;
 $$ language sql immutable strict;
-
-create table translation_proxy.cache(
-    id bigserial primary key,
-    source char(2) not null,
-    target char(2) not null,
-    q text not null,
-    result text not null,
-    created timestamp not null default now(),
-    api_engine text not null default 'google'
-);
-create unique index u_cache_q_source_target on translation_proxy.cache
-    using btree(md5(q), source, target);
-
-comment on table translation_proxy.cache is 'Cache for Translation proxy API calls';
 
 -- api_key, source lang, target lang, text
 create or replace function translation_proxy._google_translate_curl(text, char(2), char(2), text) returns text as $$
@@ -79,16 +68,16 @@ begin
         from
             translation_proxy.cache
         right join queries on md5(trim(queries.q)) = md5(cache.q)
-            and cache.source = translate.source
-            and cache.target = translate.target
+            and cache.source = google_translate.source
+            and cache.target = google_translate.target
     loop
         raise debug 'INPUT: i: %, q: "%", result found in cache: "%"', rec.i, rec.q, rec.result;
         if rec.result is not null then
             res[rec.i] := rec.result;
-        elsif (current_setting('translation_proxy.begin_at') is not null
-                            and current_setting('translation_proxy.begin_at')::timestamp > current_timestamp
-              ) or (current_setting('translation_proxy.end_at') is not null
-                            and current_setting('translation_proxy.end_at')::timestamp < current_timestamp
+        elsif (current_setting('translation_proxy.google_begin_at') is not null
+                            and current_setting('translation_proxy.google_begin_at')::timestamp > current_timestamp
+              ) or (current_setting('translation_proxy.google_end_at') is not null
+                            and current_setting('translation_proxy.google_end_at')::timestamp < current_timestamp
               ) then
             res[rec.i] := rec.q;
         else
@@ -111,7 +100,7 @@ begin
         end if;
         raise info 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         begin
-          select into response_text translation_proxy._translate_curl(api_key, source, target, q2call_urlencoded);
+          select into response_text translation_proxy._google_translate_curl(api_key, source, target, q2call_urlencoded);
           response := response_text::json;
         exception
           when invalid_text_representation then -- Google returned text, not JSON
@@ -131,8 +120,8 @@ begin
             loop
                 res[i2call[k]] := regexp_replace((resp_1->'translatedText')::text, '"$|^"', '', 'g');
                 if res[i2call[k]] <> '' then
-                    insert into translation_proxy.cache(source, target, q, result)
-                    values(translate.source, translate.target, qs2call[k], res[i2call[k]])
+                    insert into translation_proxy.cache(source, target, q, result, api_engine)
+                    values(google_translate.source, google_translate.target, qs2call[k], res[i2call[k]], 'google'::text)
                     on conflict do nothing;
                 else
                     raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
@@ -156,7 +145,7 @@ begin
         raise exception 'Configuration error: translation_proxy.google_api_key has not been set';
     end if;
 
-    return translation_proxy.translate(current_setting('translation_proxy.google_api_key')::text, source, target, qs);
+    return translation_proxy.google_translate(current_setting('translation_proxy.google_api_key')::text, source, target, qs);
 end;
 $$ language plpgsql;
 
@@ -168,7 +157,7 @@ begin
         raise exception 'Configuration error: translation_proxy.google_api_key has not been set';
     end if;
     select into res translate
-    from translation_proxy.translate(current_setting('translation_proxy.google_api_key')::text, source, target, ARRAY[q]);
+    from translation_proxy.google_translate(current_setting('translation_proxy.google_api_key')::text, source, target, ARRAY[q]);
 
     return res[1];
 end;
@@ -192,7 +181,7 @@ begin
     select into qs array(select * from json_array_elements_text(q));
 
     select into res translate
-    from translation_proxy.translate(current_setting('translation_proxy.google_api_key')::text, source, target, qs);
+    from translation_proxy.google_translate(current_setting('translation_proxy.google_api_key')::text, source, target, qs);
 
     return res;
 end;
