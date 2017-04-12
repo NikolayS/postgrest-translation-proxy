@@ -17,7 +17,8 @@ PASSWORD=$4
 curl --connect-timeout 2 -c "$COOKIE" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  --data-urlencode "{\"username\":\"$LOGIN\",\"password\":\"$PASSWORD\",\"isPersistent\":\"false\"}" "$AUTH" 2>/dev/null | grep 'true'
+  -d "{\"username\":\"$LOGIN\",\"password\":\"$PASSWORD\",\"isPersistent\":\"false\"}" "$AUTH" 2>/dev/null | grep 'true' > /dev/null
+echo $?
 $$ language plsh;
 
 -- server-url, cookie-file-name
@@ -43,7 +44,7 @@ curl --connect-timeout 2 -b "$COOKIE" -c "$COOKIE" \
 	 --data-urlencode "from=$SRC" \
 	 --data-urlencode "to=$DST" \
 	 --data-urlencode "profile=$PROFILE" \
-  "$SERVER_URL/Services/v1/rest.svc/TranslateText" 2>/dev/null
+  "$SERVER_URL/Services/v1/rest.svc/TranslateText" 2>>/dev/null
 $$ language plsh;
 
 -- server_url, cookie-file-name, text
@@ -60,32 +61,46 @@ CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(src char(2), dst ch
 DECLARE
   last_req TEXT;
   answer TEXT;
+  login_ok INTEGER;
 BEGIN
+  IF src = dst THEN
+    RAISE EXCEPTION '''source'' cannot be equal to ''target'' (see details)'
+      USING detail = 'Received equal ''source'' and ''target'': ' || source;
+  END IF;
+
   -- checking cache
   SELECT result INTO answer
-	FROM cache
-	WHERE api_engine = 'promt' AND source = src AND target = dst AND q = qs
-	LIMIT 1;
+    FROM translation_proxy.cache
+    WHERE api_engine = 'promt' AND source = src AND target = dst AND q = qs
+    LIMIT 1;
   IF answer IS NOT NULL THEN
-	RETURN answer;
+    RETURN answer;
   END IF;
-  
+
   -- checking that last usage is older then timeout, do I need to login?
   SELECT id INTO last_req FROM translation_proxy.cache
     WHERE api_engine = 'promt' AND created > ( now() - current_setting('translation_proxy.promt.login_timeout')::INTERVAL )
     LIMIT 1;
   IF last_req IS NULL THEN
-    PERFORM translation_proxy._promt_login_curl(
+    RAISE DEBUG 'Authenticating to promt server ';
+    SELECT INTO login_ok translation_proxy._promt_login_curl(
       current_setting('translation_proxy.promt.server_url'),
       current_setting('translation_proxy.promt.cookie_file'),
       current_setting('translation_proxy.promt.login'),
       current_setting('translation_proxy.promt.password') );
+    IF login_ok != 0 THEN
+  		RAISE EXCEPTION 'Server % returned authentication error', current_setting('translation_proxy.promt.server_url');
+  	END IF;
   END IF;
   -- translation
   answer := translation_proxy._promt_translate_curl(
     current_setting('translation_proxy.promt.server_url'),
     current_setting('translation_proxy.promt.cookie_file'),
     src, dst, qs, profile );
+  IF answer IS NULL OR answer = '' THEN
+    raise exception 'Promt server responded with empty answer';
+  END IF;
+
   INSERT INTO translation_proxy.cache ( source, target, q, result, created, api_engine )
     VALUES ( src, dst, qs, answer, now(), 'promt' );
   RETURN answer;
