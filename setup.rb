@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 if (ARGV[0] =~/^-?-h/) || (! File.exists?('setup.yml'))
-  puts <<~USAGEBANNER
+  puts <<-USAGEBANNER
 
     Usage:
       copy the file 'setup-example.yml' to 'setup.yml'
@@ -9,7 +9,7 @@ if (ARGV[0] =~/^-?-h/) || (! File.exists?('setup.yml'))
     Then start this script.
     If some :use key is 'false' such engine will not be installed.
 
-  USAGEBANNER
+USAGEBANNER
   exit
 end
 
