@@ -41,6 +41,8 @@ class Setup
   def setup_google
     puts "Setup Google API"
     @cfg[:google][:script].gsub! /YOUR_GOOGLE_API_KEY/, @cfg[:google][:api_key]
+    @cfg[:google][:script].gsub! /GOOGLE_BEGIN_AT/, @cfg[:google][:begin_at].to_s
+    @cfg[:google][:script].gsub! /GOOGLE_END_AT/, @cfg[:google][:end_at].to_s
     @psql.puts @cfg[:google][:script]
   end
 

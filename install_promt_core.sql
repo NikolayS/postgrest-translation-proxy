@@ -17,7 +17,7 @@ PASSWORD=$4
 curl --connect-timeout 2 -c "$COOKIE" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$LOGIN\",\"password\":\"$PASSWORD\",\"isPersistent\":\"false\"}" "$AUTH" 2>/dev/null | grep 'true'
+  --data-urlencode "{\"username\":\"$LOGIN\",\"password\":\"$PASSWORD\",\"isPersistent\":\"false\"}" "$AUTH" 2>/dev/null | grep 'true'
 $$ language plsh;
 
 -- server-url, cookie-file-name
@@ -39,7 +39,11 @@ DST=$4
 QUERY=$5
 PROFILE=$6
 curl --connect-timeout 2 -b "$COOKIE" -c "$COOKIE" \
-  "$SERVER_URL/Services/v1/rest.svc/TranslateText?text=$QUERY&from=$SRC&to=$DST&profile=$PROFILE" 2>/dev/null
+  -G --data-urlencode "text=$QUERY" \
+	 --data-urlencode "from=$SRC" \
+	 --data-urlencode "to=$DST" \
+	 --data-urlencode "profile=$PROFILE" \
+  "$SERVER_URL/Services/v1/rest.svc/TranslateText" 2>/dev/null
 $$ language plsh;
 
 -- server_url, cookie-file-name, text
