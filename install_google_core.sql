@@ -1,7 +1,7 @@
 -- Google API
-alter database DBNAME set translation_proxy.google.api_key = 'YOUR_google.api_key';
-alter database DBNAME set translation_proxy.google.begin_at = '2000-01-01';
-alter database DBNAME set translation_proxy.google.end_at = '2100-01-01';
+alter database DBNAME set translation_proxy.google.api_key = 'YOUR_GOOGLE_API_KEY';
+alter database DBNAME set translation_proxy.google.begin_at = 'GOOGLE_BEGIN_AT';
+alter database DBNAME set translation_proxy.google.end_at = 'GOOGLE_END_AT';
 
 create or replace function translation_proxy.urlencode(text) returns text as $$
     select
@@ -76,8 +76,8 @@ begin
             res[rec.i] := rec.result;
         elsif (current_setting('translation_proxy.google.begin_at') is not null
                             and current_setting('translation_proxy.google.begin_at')::timestamp > current_timestamp
-              ) or (current_setting('translation_proxy.google_end_at') is not null
-                            and current_setting('translation_proxy.google_end_at')::timestamp < current_timestamp
+              ) or (current_setting('translation_proxy.google.end_at') is not null
+                            and current_setting('translation_proxy.google.end_at')::timestamp < current_timestamp
               ) then
             res[rec.i] := rec.q;
         else
@@ -156,7 +156,7 @@ begin
     if current_setting('translation_proxy.google.api_key') is null or current_setting('translation_proxy.google.api_key') = '' then
         raise exception 'Configuration error: translation_proxy.google.api_key has not been set';
     end if;
-    select into res translate
+    select into res google_translate
     from translation_proxy.google_translate(current_setting('translation_proxy.google.api_key')::text, source, target, ARRAY[q]);
 
     return res[1];
@@ -180,7 +180,7 @@ begin
 
     select into qs array(select * from json_array_elements_text(q));
 
-    select into res translate
+    select into res google_translate
     from translation_proxy.google_translate(current_setting('translation_proxy.google.api_key')::text, source, target, qs);
 
     return res;
