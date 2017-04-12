@@ -1,21 +1,23 @@
 -- Promt API
-ALTER DATABASE DBNAME SET translation_proxy.promt_login = 'YOUR_PROMT_LOGIN';
-ALTER DATABASE DBNAME SET translation_proxy.promt_password = 'YOUR_PROMT_PASSWORD';
-ALTER DATABASE DBNAME SET translation_proxy.promt_server_url = 'YOUR_PROMT_SERVER_URL';
-ALTER DATABASE DBNAME SET translation_proxy.promt_login_timeout = 'PROMT_LOGIN_TIMEOUT';
+ALTER DATABASE DBNAME SET translation_proxy.promt.login = 'YOUR_PROMT_LOGIN';
+ALTER DATABASE DBNAME SET translation_proxy.promt.password = 'YOUR_PROMT_PASSWORD';
+ALTER DATABASE DBNAME SET translation_proxy.promt.server_url = 'YOUR_PROMT_SERVER_URL';
+ALTER DATABASE DBNAME SET translation_proxy.promt.login_timeout = 'PROMT_LOGIN_TIMEOUT';
+ALTER DATABASE DBNAME SET translation_proxy.promt.cookie_file = 'PROMT_COOKIE_FILE';
 
 -- Dumb functions for login, logout, translate and detect lnaguage
--- server-url, login, password; returns cookie-file-name
-CREATE OR REPLACE FUNCTION translation_proxy._promt_login_curl(text, text, text) RETURNS TEXT AS $$
+-- server-url, cookie-file, login, password; returns 0 if no errors
+CREATE OR REPLACE FUNCTION translation_proxy._promt_login_curl(text, text, text, text) RETURNS TEXT AS $$
 #!/bin/sh
 SERVER_URL=$1
 AUTH="$SERVER_URL/Services/auth/rest.svc/Login"
-COOKIE=$( mktemp "/tmp/promt.XXXXX.jar" )
+COOKIE=$2
+LOGIN=$3
+PASSWORD=$4
 curl --connect-timeout 2 -c "$COOKIE" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
-  -d "{\"username\":\"$2\",\"password\":\"$3\",\"isPersistent\":\"false\"}" "$AUTH" 2>/dev/null | grep 'true'
-echo -n "$COOKIE"
+  -d "{\"username\":\"$LOGIN\",\"password\":\"$PASSWORD\",\"isPersistent\":\"false\"}" "$AUTH" 2>/dev/null | grep 'true'
 $$ language plsh;
 
 -- server-url, cookie-file-name
@@ -24,7 +26,7 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_logout_curl(text, text) RETU
 SERVER_URL=$1
 AUTH="$SERVER_URL/Services/auth/rest.svc/Logout"
 COOKIE=$2
-curl --connect-timeout 2 -b "$COOKIE" -c "$COOKIE" "$AUTH" 2>/dev/null 
+curl --connect-timeout 2 -b "$COOKIE" -c "$COOKIE" "$AUTH" 2>/dev/null
 $$ language plsh;
 
 -- server_url, cookie-file-name, source lang, target lang, text, translation profile
@@ -32,8 +34,12 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_translate_curl(text, text, c
 #!/bin/sh
 SERVER_URL=$1
 COOKIE=$2
+SRC=$3
+DST=$4
+QUERY=$5
+PROFILE=$6
 curl --connect-timeout 2 -b "$COOKIE" -c "$COOKIE" \
-  "$SERVER_URL/Services/v1/rest.svc/TranslateText?text=$5&from=$3&to=$4&profile=$6" 2>/dev/null
+  "$SERVER_URL/Services/v1/rest.svc/TranslateText?text=$QUERY&from=$SRC&to=$DST&profile=$PROFILE" 2>/dev/null
 $$ language plsh;
 
 -- server_url, cookie-file-name, text
@@ -41,30 +47,43 @@ CREATE OR REPLACE FUNCTION translation_proxy.promt_detext_text_language(text, te
 #!/bin/sh
 SERVER_URL=$1
 COOKIE=$2
+QUERY=$3
 curl --connect-timeout 2 -b "$COOKIE" -c "$COOKIE" \
-  "$SERVER_URL/Services/v1/rest.svc/DetectTextLanguage?text=$4" 2>/dev/null
+  "$SERVER_URL/Services/v1/rest.svc/DetectTextLanguage?text=$QUERY" 2>/dev/null
 $$ language plsh;
 
-CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(source char(2), target char(2), qs text, profile text DEFAULT '') RETURNS text AS $$
+CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(src char(2), dst char(2), qs text, profile text DEFAULT '') RETURNS text AS $$
 DECLARE
-  last_login INTEGER;
+  last_req TEXT;
   answer TEXT;
 BEGIN
-  -- checking that last usage is more then timeout
-  SELECT id INTO last_login FROM translation_proxy.cache
-    WHERE api_engine = 'promt' AND created > ( now() - current_setting('translation_proxy.promt_login_timeout')::INTERVAL )
+  -- checking cache
+  SELECT result INTO answer
+	FROM cache
+	WHERE api_engine = 'promt' AND source = src AND target = dst AND q = qs
+	LIMIT 1;
+  IF answer IS NOT NULL THEN
+	RETURN answer;
+  END IF;
+  
+  -- checking that last usage is older then timeout, do I need to login?
+  SELECT id INTO last_req FROM translation_proxy.cache
+    WHERE api_engine = 'promt' AND created > ( now() - current_setting('translation_proxy.promt.login_timeout')::INTERVAL )
     LIMIT 1;
-  IF last_login IS NULL THEN
-    ALTER DATABASE DBNAME SET translation_proxy.promt_cookie_file = translation_proxy._promt_login_curl(
-      current_setting('translation_proxy.promt_server_url'),
-      current_setting('translation_proxy.promt_login'),
-      current_setting('translation_proxy.promt_password') );
+  IF last_req IS NULL THEN
+    PERFORM translation_proxy._promt_login_curl(
+      current_setting('translation_proxy.promt.server_url'),
+      current_setting('translation_proxy.promt.cookie_file'),
+      current_setting('translation_proxy.promt.login'),
+      current_setting('translation_proxy.promt.password') );
   END IF;
   -- translation
-  SELECT translation_proxy._promt_translate_curl(
-    current_setting('translation_proxy.promt_server_url')
-  )
-    INTO answer;
-
+  answer := translation_proxy._promt_translate_curl(
+    current_setting('translation_proxy.promt.server_url'),
+    current_setting('translation_proxy.promt.cookie_file'),
+    src, dst, qs, profile );
+  INSERT INTO translation_proxy.cache ( source, target, q, result, created, api_engine )
+    VALUES ( src, dst, qs, answer, now(), 'promt' );
+  RETURN answer;
 END;
 $$ LANGUAGE plpgsql;

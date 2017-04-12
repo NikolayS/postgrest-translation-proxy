@@ -7,7 +7,7 @@ if (ARGV[0] =~/^-?-h/) || (! File.exists?('setup.yml'))
       and put there keys for APIs that you have
       and creds for your database access.
     Then start this script.
-    If some api_key is 'null' such engine will not be installed.
+    If some :use key is 'false' such engine will not be installed.
 
   USAGEBANNER
   exit
@@ -50,6 +50,7 @@ class Setup
       .gsub!( /YOUR_PROMT_PASSWORD/, @cfg[:promt][:password] )
       .gsub!( /YOUR_PROMT_SERVER_URL/, @cfg[:promt][:server_url] )
       .gsub!( /PROMT_LOGIN_TIMEOUT/, @cfg[:promt][:login_timeout] )
+      .gsub!( /PROMT_COOKIE_FILE/, @cfg[:promt][:cookie_file])
     @psql.puts @cfg[:promt][:script]
   end
 
