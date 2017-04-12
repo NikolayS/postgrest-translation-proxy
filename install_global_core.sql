@@ -11,6 +11,6 @@ create table translation_proxy.cache(
     api_engine text not null
 );
 create unique index u_cache_q_source_target on translation_proxy.cache
-    using btree(md5(q), source, target);
+    using btree(md5(q), source, target, api_engine);
 
 comment on table translation_proxy.cache is 'Cache for Translation proxy API calls';
