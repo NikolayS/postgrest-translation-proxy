@@ -19,6 +19,6 @@
   :server_url: http://pts.promt.com/pts/
   :cookie_file: /tmp/promt_cookie.jar
 :bing:
-  :use: false
-  :api_key_1: 423b7e08e1ed498f88eb9cca12482c23
-  :api_key_2: acf46b6a54c84f53887b059bdcb63bf1
+  :use: true
+  :api_key: 423b7e08e1ed498f88eb9cca12482c23
+  :token_expiration: 10 minutes

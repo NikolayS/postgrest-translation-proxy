@@ -40,25 +40,24 @@ class Setup
 
   def setup_google
     puts "Setup Google API"
-    @cfg[:google][:script].gsub! /YOUR_GOOGLE_API_KEY/, @cfg[:google][:api_key]
-    @cfg[:google][:script].gsub! /GOOGLE_BEGIN_AT/, @cfg[:google][:begin_at].to_s
-    @cfg[:google][:script].gsub! /GOOGLE_END_AT/, @cfg[:google][:end_at].to_s
-    @psql.puts @cfg[:google][:script]
+      @psql.puts @cfg[:google][:script].gsub( /YOUR_GOOGLE_API_KEY/, @cfg[:google][:api_key] )
+                  .gsub( /GOOGLE_BEGIN_AT/, @cfg[:google][:begin_at].to_s )
+                  .gsub( /GOOGLE_END_AT/, @cfg[:google][:end_at].to_s )
   end
 
   def setup_promt
     puts "Setup Promt API"
-    @cfg[:promt][:script].gsub!(/YOUR_PROMT_LOGIN/, @cfg[:promt][:login] )
-      .gsub!( /YOUR_PROMT_PASSWORD/, @cfg[:promt][:password] )
-      .gsub!( /YOUR_PROMT_SERVER_URL/, @cfg[:promt][:server_url] )
-      .gsub!( /PROMT_LOGIN_TIMEOUT/, @cfg[:promt][:login_timeout] )
-      .gsub!( /PROMT_COOKIE_FILE/, @cfg[:promt][:cookie_file])
-    @psql.puts @cfg[:promt][:script]
+    @psql.puts @cfg[:promt][:script].gsub(/YOUR_PROMT_LOGIN/, @cfg[:promt][:login] )
+                  .gsub( /YOUR_PROMT_PASSWORD/, @cfg[:promt][:password] )
+                  .gsub( /YOUR_PROMT_SERVER_URL/, @cfg[:promt][:server_url] )
+                  .gsub( /PROMT_LOGIN_TIMEOUT/, @cfg[:promt][:login_timeout] )
+                  .gsub( /PROMT_COOKIE_FILE/, @cfg[:promt][:cookie_file])
   end
 
   def setup_bing
     puts "Setup MS Bing API"
-    @psql.puts @cfg[:bing][:script]
+    @psql.puts @cfg[:bing][:script].gsub( /YOUR_BING_API_KEY/, @cfg[:bing][:api_key] )
+                  .gsub( /BING_TOKEN_EXPIRATION/, @cfg[:bing][:token_expiration] )
   end
 
 end
