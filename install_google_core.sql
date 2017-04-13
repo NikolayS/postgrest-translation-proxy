@@ -121,7 +121,7 @@ begin
                 res[i2call[k]] := regexp_replace((resp_1->'translatedText')::text, '"$|^"', '', 'g');
                 if res[i2call[k]] <> '' then
                     insert into translation_proxy.cache(source, target, q, result, api_engine)
-                    values(google_translate.source, google_translate.target, qs2call[k], res[i2call[k]], 'google'::text)
+                    values(google_translate.source, google_translate.target, qs2call[k], res[i2call[k]], 'google')
                     on conflict do nothing;
                 else
                     raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
