@@ -1,5 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS translation_proxy;
 CREATE EXTENSION IF NOT EXISTS plsh;
+CREATE EXTENSION IF NOT EXISTS plpython2u;
+
 CREATE TYPE translation_proxy.api_engine_type AS ENUM ('google', 'promt', 'bing');
 
 CREATE TABLE translation_proxy.cache(
