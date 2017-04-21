@@ -30,6 +30,35 @@ create or replace function translation_proxy._google_translate_curl(text, char(2
 curl --connect-timeout 2 -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
 $$ language plsh;
 
+CREATE OR REPLACE FUNCTION translation_proxy.google_translate(src char(2), dst char(2), qs text[]) RETURNS TEXT[] AS $$
+  import pycurl
+  from StringIO import StringIO
+  from urllib import urlencode
+  import json
+
+  if src == dst :
+    plpy.error("Destination language must be other than source one.")
+  if not qs
+    plpy.error("Not enough text for translation.")
+
+  api_key = plpy.execute("SELECT translation_proxy._load_cookie('google')")[0]['_load_cookie']
+  buffer = StringIO()
+  curl = pycurl.Curl()
+  curl.setopt( pycurl.URL,
+    'https://www.googleapis.com/language/translate/v2?' +
+    urlencode({ 'key': api_key, 'source': src, 'target': dst ,'q': qs } ))
+  curl.setopt( pycurl.WRITEDATA, buffer )
+  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
+  curl.setopt( pycurl.VERBOSE, 1 )
+  curl.perform()
+  answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
+  curl.close()
+  if answer_code != 200 :
+    plpy.error( "Google returned %d", answer_code )
+
+
+$$ LANGUAGE plpgsql;
+
 create or replace function translation_proxy.google_translate(api_key text, source char(2), target char(2), qs text[]) returns text[] as $$
 declare
     qs2call text[];
