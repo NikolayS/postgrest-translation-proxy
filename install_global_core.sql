@@ -26,9 +26,12 @@ CREATE TABLE translation_proxy.authcache(
   updated TIMESTAMP NOT NULL DEFAULT now()
 );
 
+CREATE UNIQUE INDEX u_authcache_engine ON translation_proxy.authcache ( api_engine );
+
 COMMENT ON TABLE translation_proxy.authcache IS 'Translation API cache for remote authorization keys';
 
-INSERT INTO translation_proxy.authcache (api_engine) VALUES ('google'), ('promt'), ('bing');
+INSERT INTO translation_proxy.authcache (api_engine) VALUES ('google'), ('promt'), ('bing')
+  ON CONFLICT DO NOTHING;
 
 CREATE TABLE translation_proxy.detection_cache(
   id BIGSERIAL PRIMARY KEY,

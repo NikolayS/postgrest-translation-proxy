@@ -2,35 +2,9 @@
 alter database DBNAME set translation_proxy.google.api_key = 'YOUR_GOOGLE_API_KEY';
 alter database DBNAME set translation_proxy.google.begin_at = 'GOOGLE_BEGIN_AT';
 alter database DBNAME set translation_proxy.google.end_at = 'GOOGLE_END_AT';
-
-create or replace function translation_proxy.urlencode(text) returns text as $$
-    select
-        string_agg(
-            case
-                when ascii(ch) in (32, 160) then -- spaces, CR, LF
-                    '+'
-                when ascii(ch) between 127 and 165 then -- unsupported chars
-                    '+'
-                when ol=1 and (ch ~ '[+\]\[%&#]+' or ascii(ch) < 32)  -- this is not traditional urlencode!
-                    then regexp_replace(upper(substring(ch::bytea::text, 3)), '(..)', E'%\\1', 'g')
-                else
-                    ch
-            end,
-            ''
-        )
-    from (
-        select ch, octet_length(ch) as ol
-        from regexp_split_to_table($1, '') as ch
-    ) as s;
-$$ language sql immutable strict;
-
--- api_key, source lang, target lang, text
-create or replace function translation_proxy._google_translate_curl(text, char(2), char(2), text) returns text as $$
-#!/bin/sh
-curl --connect-timeout 2 -H "Accept: application/json" "https://www.googleapis.com/language/translate/v2?key=$1&source=$2&target=$3&q=$4" 2>/dev/null | sed 's/\r//g'
-$$ language plsh;
-
-CREATE OR REPLACE FUNCTION translation_proxy.google_translate(src char(2), dst char(2), qs text[]) RETURNS TEXT[] AS $$
+-- source, target, text
+CREATE OR REPLACE FUNCTION translation_proxy._google_get_translation(src char(2), dst char(2), qs text[])
+RETURNS TEXT[] AS $$
   import pycurl
   from StringIO import StringIO
   from urllib import urlencode
@@ -38,12 +12,13 @@ CREATE OR REPLACE FUNCTION translation_proxy.google_translate(src char(2), dst c
 
   if src == dst :
     plpy.error("Destination language must be other than source one.")
-  if not qs
+  if not qs :
     plpy.error("Not enough text for translation.")
 
   api_key = plpy.execute("SELECT translation_proxy._load_cookie('google')")[0]['_load_cookie']
   buffer = StringIO()
   curl = pycurl.Curl()
+  -- { 'q', 'source', 'target', 'format' }
   curl.setopt( pycurl.URL,
     'https://www.googleapis.com/language/translate/v2?' +
     urlencode({ 'key': api_key, 'source': src, 'target': dst ,'q': qs } ))
@@ -55,9 +30,9 @@ CREATE OR REPLACE FUNCTION translation_proxy.google_translate(src char(2), dst c
   curl.close()
   if answer_code != 200 :
     plpy.error( "Google returned %d", answer_code )
+  return buffer.getvalue()
 
-
-$$ LANGUAGE plpgsql;
+$$ LANGUAGE plpython2u;
 
 create or replace function translation_proxy.google_translate(api_key text, source char(2), target char(2), qs text[]) returns text[] as $$
 declare
@@ -129,7 +104,7 @@ begin
         end if;
         raise info 'Calling Google Translate API for source=%, target=%, q=%', source, target, q2call_urlencoded;
         begin
-          select into response_text translation_proxy._google_translate_curl(api_key, source, target, q2call_urlencoded);
+          select into response_text translation_proxy._google_get_translation(source, target, q2call_urlencoded);
           response := response_text::json;
         exception
           when invalid_text_representation then -- Google returned text, not JSON
@@ -149,9 +124,10 @@ begin
             loop
                 res[i2call[k]] := regexp_replace((resp_1->'translatedText')::text, '"$|^"', '', 'g');
                 if res[i2call[k]] <> '' then
-                    insert into translation_proxy.cache(source, target, q, result, api_engine)
-                    values(google_translate.source, google_translate.target, qs2call[k], res[i2call[k]], 'google')
-                    on conflict do nothing;
+                  RAISE DEBUG 'Saving translated text into cache';
+                    INSERT INTO translation_proxy.cache(source, target, q, result, api_engine)
+                      VALUES( google_translate.source, google_translate.target, qs2call[k], res[i2call[k]], 'google' )
+                      ON CONFLICT DO NOTHING;
                 else
                     raise exception 'Cannot parse Google API''s response properly (see Details to check full "response" JSON)'
                         using detail = jsonb_pretty(response::jsonb);
@@ -174,7 +150,8 @@ begin
         raise exception 'Configuration error: translation_proxy.google.api_key has not been set';
     end if;
 
-    return translation_proxy.google_translate(current_setting('translation_proxy.google.api_key')::text, source, target, qs);
+    return translation_proxy.google_translate(
+      current_setting('translation_proxy.google.api_key')::text, source, target, qs);
 end;
 $$ language plpgsql;
 
@@ -186,7 +163,8 @@ begin
         raise exception 'Configuration error: translation_proxy.google.api_key has not been set';
     end if;
     select into res google_translate
-    from translation_proxy.google_translate(current_setting('translation_proxy.google.api_key')::text, source, target, ARRAY[q]);
+    from translation_proxy.google_translate(
+      current_setting('translation_proxy.google.api_key')::text, source, target, ARRAY[q]);
 
     return res[1];
 end;

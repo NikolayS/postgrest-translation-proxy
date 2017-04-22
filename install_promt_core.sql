@@ -53,6 +53,7 @@ RETURNS text AS $$
   from StringIO import StringIO
   from urllib import urlencode
   import json
+  import re
 
   plan = plpy.prepare("SELECT current_setting('translation_proxy.promt.server_url')")
   server_url = "%s/Services/v1/rest.svc/TranslateText" % plpy.execute(plan)[0]['current_setting']
@@ -76,8 +77,10 @@ RETURNS text AS $$
   try:
     data = json.load(buffer)
     plpy.error( data['Message'] if ('Message' in data) else data[ data.keys()[0] ] )
-  except ValueError: # translation is valid
-    return buffer.getvalue()
+  except ValueError:
+    # translation is valid
+    # and yes, promt answers with quoted string like '"some text"'
+    return re.sub( r'^"|"$', '', buffer.getvalue() )
 $$ language plpython2u;
 
 -- from, to, text, profile
@@ -115,8 +118,8 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- text, returns language, saves to cache
-CREATE OR REPLACE FUNCTION translation_proxy._promt_detext_language(qs text)
-RETURNS CHAR(2) AS $$
+CREATE OR REPLACE FUNCTION translation_proxy._promt_detect_language(qs text)
+RETURNS CHAR(10) AS $$
   import pycurl
   from StringIO import StringIO
   from urllib import urlencode
@@ -135,22 +138,17 @@ RETURNS CHAR(2) AS $$
   curl.close()
   if answer_code != 200 :
     plpy.error( "Promt API returned %s\nBody is: %s" % ( answer_code, buffer.getvalue() ))
-  answer = buffer.getvalue().decode('utf-8')
+  answer = buffer.getvalue().decode('utf-8').replace('"','')
   buffer.close()
   plpy.debug("Answer len is %d, content is %s, unicode? %d" % ( len(answer), answer, isinstance(answer, unicode) ) )
 
   if answer != 'kk':
-    plan = plpy.prepare( """
-      INSERT INTO translation_proxy.detection_cache
-      ( lang, q, api_engine ) VALUES ( $1, $2, 'promt' )
-    """, [ 'CHAR(2)', 'TEXT' ] )
-    plpy.execute( plan, [ answer, qs ] )
     return answer
 
   plpy.error("Promt don't know that language" )
 $$ language plpython2u;
 
-CREATE OR REPLACE FUNCTION translation_proxy.promt_detext_language(qs text)
+CREATE OR REPLACE FUNCTION translation_proxy.promt_detect_language(qs text)
 RETURNS char(2) as $$
 DECLARE
   lng TEXT;
@@ -159,14 +157,11 @@ BEGIN
     RAISE EXCEPTION 'text cannot be equal empty';
   END IF;
   -- checking cache
-  SELECT lang INTO lng FROM translation_proxy.detection_cache
-    WHERE api_engine = 'promt'
-      AND q = qs
-    LIMIT 1;
+  lng := translation_proxy._load_detected_language(qs, 'promt');
   IF lng IS NOT NULL THEN
     RETURN lng;
   END IF;
-  lng := translation_proxy._promt_detext_language(qs);
+  lng := translation_proxy._promt_detect_language(qs);
   IF lng <> '' THEN
     INSERT INTO translation_proxy.detection_cache
         ( lang, q, api_engine ) VALUES ( lng, qs, 'promt' );
