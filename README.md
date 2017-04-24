@@ -54,7 +54,7 @@ psql -c "alter database DBNAME set translation_proxy.google_end_at = '2100-01-01
 
 Alternatively, you can use `ALTER ROLE ... SET translation_proxy.google_api_key = 'YOUR_GOOGLE_API_KEY';` or put this setting to `postgresql.conf` or do `ALTER SYSTEM SET translation_proxy.google_api_key = 'YOUR_GOOGLE_API_KEY';` (in these cases, it will be available cluster-wide).
 
-Parameters `translation_proxy.google_begin_at` and `translation_proxy.google_end_at` are responsible for the period of time, when Google Translate API is allowed to be called. If current time is beyond this timeframe, onlic cache will be used.
+Parameters `translation_proxy.google_begin_at` and `translation_proxy.google_end_at` are responsible for the period of time, when Google Translate API is allowed to be called. If current time is beyond this timeframe, only the cache table will be used.
 
 To enable REST API proxy, install [PostgREST](http://postgrest.com), launch it (see `cirle.yml` as an example), and initialize API methods with the additional SQL script:
 ```sh
