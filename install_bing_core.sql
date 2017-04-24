@@ -2,6 +2,8 @@
 ALTER DATABASE DBNAME SET translation_proxy.bing.api_key = 'YOUR_BING_API_KEY';
 ALTER DATABASE DBNAME SET translation_proxy.bing.key_expiration = 'BING_TOKEN_EXPIRATION';
 
+-- main function is the bing_translate( source char(2), target char(2), qs text[] )
+
 -- api_key
 CREATE OR REPLACE FUNCTION translation_proxy._bing_get_token_curl(text) RETURNS INTEGER AS $$
 #!/bin/sh
@@ -28,7 +30,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- token, source lang, target lang, text, category
-create or replace function translation_proxy._bing_translate_curl(text, char(2), char(2), text) returns text as $$
+CREATE OR REPLACE FUNCTION translation_proxy._bing_translate_curl(TEXT, CHAR(2), CHAR(2), TEXT) RETURNS TEXT AS $$
 #!/bin/sh
 TOKEN=$1
 SRC=$2
@@ -41,9 +43,10 @@ curl -X GET -H "Authorization: Bearer $TOKEN" \
   --data-urlencode "to=$DST" \
   --data-urlencode "category=$CTG" \
   'https://api.cognitive.microsoft.com/sts/v1.0/Translate' 2>/dev/null
-$$ language plsh;
+$$ LANGUAGE plsh;
 
-create or replace function translation_proxy.bing_translate(api_key text, source char(2), target char(2), qs text[]) returns text[] as $$
-begin
-end;
-$$ language plpgsql;
+CREATE OR REPLACE FUNCTION translation_proxy.bing_translate(source CHAR(2), target CHAR(2), qs TEXT[], profile TEXT DEFAULT '')
+RETURNS text[] as $$
+BEGIN
+END;
+$$ LANGUAGE plpgsql;

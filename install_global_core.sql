@@ -12,7 +12,8 @@ CREATE TABLE translation_proxy.cache(
     result TEXT NOT NULL,
     profile TEXT NOT NULL DEFAULT '',
     created TIMESTAMP NOT NULL DEFAULT now(),
-    api_engine translation_proxy.api_engine_type NOT NULL
+    api_engine translation_proxy.api_engine_type NOT NULL,
+    encoded TEXT
 );
 
 CREATE UNIQUE INDEX u_cache_q_source_target ON translation_proxy.cache
@@ -69,7 +70,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION translation_proxy._load_detected_language(qs TEXT, engine translation_proxy.api_engine_type)
+CREATE OR REPLACE FUNCTION translation_proxy._find_detected_language(
+  qs TEXT, engine translation_proxy.api_engine_type)
 RETURNS TEXT AS $$
 DECLARE
   lng CHAR(2);
@@ -81,3 +83,32 @@ BEGIN
   RETURN lng;
 END;
 $$ LANGUAGE plpgsql;
+
+-- trigger, that URLencodes query in cache, when no translation is given
+CREATE OR REPLACE FUNCTION translation_proxy._urlencode_fields()
+RETURNS TRIGGER AS $BODY$
+  from urllib import quote_plus
+  TD['new']['encoded'] =  quote_plus( TD['new']['q'] )
+  return 'MODIFY'
+$BODY$ LANGUAGE plpython2u;
+
+CREATE TRIGGER _prepare_for_fetch BEFORE INSERT ON translation_proxy.cache
+  FOR EACH ROW
+  WHEN (NEW.result IS NULL)
+  EXECUTE PROCEDURE translation_proxy._urlencode_fields();
+
+-- adding new parameter to url until it exceeds the limit of 2000 bytes
+CREATE OR REPLACE FUNCTION translation_proxy._urladd( url TEXT, a TEXT ) RETURNS TEXT AS $$
+  from urllib import quote_plus
+  r = url + '&' + quote_plus( a )
+  if len(r) > 1999 :
+    plpy.error('URL length is over, time to fetch.', errcode = 'EOURL')
+  return r
+$$ LANGUAGE plpython2u;
+
+-- urlencoding utility
+CREATE OR REPLACE FUNCTION translation_proxy._urlencode(q TEXT)
+RETURNS TEXT AS $BODY$
+  from urllib import quote_plus
+  return quote_plus( q )
+$BODY$ LANGUAGE plpython2u;

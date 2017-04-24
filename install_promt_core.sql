@@ -5,6 +5,15 @@ ALTER DATABASE DBNAME SET translation_proxy.promt.server_url = 'YOUR_PROMT_SERVE
 ALTER DATABASE DBNAME SET translation_proxy.promt.login_timeout = 'PROMT_LOGIN_TIMEOUT';
 ALTER DATABASE DBNAME SET translation_proxy.promt.cookie_file = 'PROMT_COOKIE_FILE';
 
+-- Main function is the promt_translate( source, destination, query[], profile )
+/* Overview:
+  0. insert received text to cache table where result is NULL
+  1. call promt_get_translation, that loads those using CURSOR
+     and add untranslated text to url until it exceeds 2000 limit
+     and then translates them on Promt server
+  2. for (possible) multitasking it locks records with SELECT FOR UPDATE
+*/
+
 -- Dumb functions for login, logout, translate and detect lnaguage
 -- authorizes on Promt API, writes cookie to db and returns it (or NULL) for next queries
 CREATE OR REPLACE FUNCTION translation_proxy._promt_login() RETURNS TEXT AS $$
@@ -157,7 +166,7 @@ BEGIN
     RAISE EXCEPTION 'text cannot be equal empty';
   END IF;
   -- checking cache
-  lng := translation_proxy._load_detected_language(qs, 'promt');
+  lng := translation_proxy._find_detected_language(qs, 'promt');
   IF lng IS NOT NULL THEN
     RETURN lng;
   END IF;
