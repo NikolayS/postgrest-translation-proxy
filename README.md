@@ -29,8 +29,8 @@ Dependencies
 ---
 1. cURL
 2. [PostgREST](http://postgrest.com) – download the latest version. See `circle.yml` for example of starting/using it.
-2. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version). For Archlinux use AUR package 'postgresql-plsh'.
-3. Ruby for easy installer
+3. `plsh` – PostgreSQL contrib module, it is NOT included to standard contribs package. To install it on Ubuntu/Debian run: `apt-get install postgresql-X.X-plsh` (where X.X could be 9.5, depending on your Postgres version). For Archlinux use AUR package 'postgresql-plsh'.
+4. Ruby for easy installer (optional)
 
 Installation and Configuration
 ---

@@ -5,7 +5,7 @@ begin
    if not exists (
       select *
       from   pg_catalog.pg_user
-      where  username = 'apiuser'
+      where  usename = 'apiuser'
     ) then
       create role apiuser password 'pass-for-apiuser' login;
    end if;
