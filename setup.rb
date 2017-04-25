@@ -52,7 +52,9 @@ class Setup
                   .gsub( /YOUR_PROMT_PASSWORD/, @cfg[:promt][:password] )
                   .gsub( /YOUR_PROMT_SERVER_URL/, @cfg[:promt][:server_url] )
                   .gsub( /PROMT_LOGIN_TIMEOUT/, @cfg[:promt][:login_timeout] )
-                  .gsub( /PROMT_COOKIE_FILE/, @cfg[:promt][:cookie_file]) + "\n"
+                  .gsub( /PROMT_COOKIE_FILE/, @cfg[:promt][:cookie_file])
+                  .gsub( /PROMT_KEY_VALID_FROM/, @cfg[:promt][:valid_from].to_s )
+                  .gsub( /PROMT_KEY_VALID_UNTIL/, @cfg[:promt][:valid_until].to_s ) + "\n"
   end
 
   def setup_bing

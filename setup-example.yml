@@ -18,6 +18,8 @@
   :login_timeout: 30 minutes
   :server_url: https://pts.promt.com/pts
   :cookie_file: /tmp/promt_cookie.jar
+  :valid_from: 2017-04-07
+  :valid_until: 2018-04-07
 :bing:
   :use: false
   :api_key: null

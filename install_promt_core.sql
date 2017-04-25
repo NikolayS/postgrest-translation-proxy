@@ -4,6 +4,8 @@ ALTER DATABASE DBNAME SET translation_proxy.promt.password = 'YOUR_PROMT_PASSWOR
 ALTER DATABASE DBNAME SET translation_proxy.promt.server_url = 'YOUR_PROMT_SERVER_URL';
 ALTER DATABASE DBNAME SET translation_proxy.promt.login_timeout = 'PROMT_LOGIN_TIMEOUT';
 ALTER DATABASE DBNAME SET translation_proxy.promt.cookie_file = 'PROMT_COOKIE_FILE';
+ALTER DATABASE DBNAME SET translation_proxy.promt.valid_from = 'PROMT_KEY_VALID_FROM';
+ALTER DATABASE DBNAME SET translation_proxy.promt.valid_until = 'PROMT_KEY_VALID_UNTIL';
 
 -- Main function is the promt_translate( source, destination, query[], profile )
 /* Overview:
@@ -55,76 +57,95 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_login() RETURNS TEXT AS $$
   plpy.fatal("Can't login into Promt API")
 $$ LANGUAGE plpython2u;
 
--- from, to, text, profile
-CREATE OR REPLACE FUNCTION translation_proxy._promt_get_translation(src char(2), dst char(2), qs text, profile text DEFAULT '')
-RETURNS text AS $$
+-- initiate translation of all fields where result is NULL
+CREATE OR REPLACE FUNCTION translation_proxy._promt_start_translation()
+RETURNS VOID AS $$
   import pycurl
   from StringIO import StringIO
   from urllib import urlencode
   import json
   import re
 
-  plan = plpy.prepare("SELECT current_setting('translation_proxy.promt.server_url')")
-  server_url = "%s/Services/v1/rest.svc/TranslateText" % plpy.execute(plan)[0]['current_setting']
-  cookie = plpy.execute("SELECT translation_proxy._promt_login()")[0]['_promt_login']
-  plpy.debug( "Queriyng server %s for translation" % server_url )
-  buffer = StringIO()
-  curl = pycurl.Curl()
-  curl.setopt( pycurl.URL, server_url + '?' + urlencode({'from': src, 'to': dst ,'text': qs, 'profile': profile } ))
-  curl.setopt( pycurl.WRITEDATA, buffer )
-  curl.setopt( pycurl.COOKIELIST, cookie )
-  curl.setopt( pycurl.VERBOSE, 1 )
-  curl.perform()
-  answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
-  curl.close()
-  if answer_code != 200 :
-    plpy.error( "Promt API returned %s\nBody is: %s" % ( answer_code, buffer.getvalue() ))
+  update_plan = plpy.prepare(
+      "UPDATE translation_proxy.cache SET result = $1, encoded = NULL WHERE id = $2",
+      [ 'text', 'bigint' ] )
+  cookie = plpy.execute( "SELECT translation_proxy._promt_login()" )[0]['_promt_login']
+  server_url = plpy.execute( "SELECT current_setting('translation_proxy.promt.server_url')" )[0]['current_setting'] + '/Services/v1/rest.svc/TranslateText?'
 
-  # checking if there no logical error, like "translation pair does not exist"
-  # normally this must return plain text
-  plpy.debug('Code 200, checking for json returned')
-  try:
-    data = json.load(buffer)
-    plpy.error( data['Message'] if ('Message' in data) else data[ data.keys()[0] ] )
-  except ValueError:
+  curl = pycurl.Curl()
+  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
+  curl.setopt( pycurl.COOKIELIST, cookie )
+  cursor = plpy.cursor( """
+    SELECT id, source, target, q, profile
+      FROM translation_proxy.cache
+      WHERE api_engine = 'promt' AND result IS NULL
+      ORDER BY source, target, profile
+      FOR UPDATE SKIP LOCKED
+    """ )
+
+  while True:
+    row = cursor.fetch(1)
+    if not row:
+      break
+    buffer = StringIO()
+    curl.setopt( pycurl.WRITEDATA, buffer )
+    curl.setopt( pycurl.URL, server_url +
+        urlencode({ 'from': row[0]['source'],
+          'to': row[0]['target'],
+          'text': row[0]['q'],
+          'profile': row[0]['profile'] }) )
+    curl.perform()
+    answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
+    if answer_code != 200 :
+      plpy.error( "Promt API returned %s\nBody is: %s" % ( answer_code, buffer.getvalue() ))
+    # normally this must return plain text
     # translation is valid
     # and yes, promt answers with quoted string like '"some text"'
-    return re.sub( r'^"|"$', '', buffer.getvalue() )
+    t = re.sub( r'^"|"$', '', buffer.getvalue() )
+    plpy.debug( "Promt answer is %s", t )
+    plpy.execute( update_plan, [ t, row[0]['id'] ])
+    buffer.close()
+
+  curl.close()
+  buffer.close()
 $$ language plpython2u;
 
--- from, to, text, profile
-CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(src char(2), dst char(2), qs text, profile text DEFAULT '')
-RETURNS text AS $$
+-- from, to, text[], profile
+CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(
+    src char(2), dst char(2), qs text[], api_profile text DEFAULT '') RETURNS TEXT[] AS $BODY$
 DECLARE
-  last_req TEXT;
-  answer TEXT;
-  login_ok INTEGER;
+  new_row_ids BIGINT[]; -- saving here rows that needs translation
+  r TEXT[];
 BEGIN
+  SET SCHEMA 'translation_proxy';
   IF src = dst THEN
     RAISE EXCEPTION '''source'' cannot be equal to ''target'' (see details)'
       USING detail = 'Received equal ''source'' and ''target'': ' || source;
   END IF;
-
-  -- checking cache
-  SELECT result INTO answer
-    FROM translation_proxy.cache
-    WHERE api_engine = 'promt' AND source = src AND target = dst AND q = qs
-    LIMIT 1;
-  IF answer IS NOT NULL THEN
-    RETURN answer;
+  IF array_length(qs, 1) = 0 THEN
+    RAISE EXCEPTION 'NEED SOMETHING TO TRANSLATE';
   END IF;
-
-  -- translation
-  answer := translation_proxy._promt_get_translation( src, dst, qs, profile );
-  IF answer IS NULL OR answer = '' THEN
-    raise exception 'Promt server responded with empty answer';
+  -- let Promt translates rows with NULL result
+  WITH created( saved_ids ) AS (
+    INSERT INTO cache ( source, target, q, profile, api_engine )
+      ( SELECT src, dst, unnest(qs), api_profile, 'promt' )
+      ON CONFLICT (md5(q), source, target, api_engine, profile) DO
+        UPDATE SET source = src
+          -- this is dirty hack doing nothing with table only for returning all requested ids
+      RETURNING id )
+    SELECT array_agg( saved_ids ) FROM created INTO new_row_ids;
+  IF ( current_setting('translation_proxy.promt.valid_from') IS NOT NULL
+          AND current_setting('translation_proxy.promt.valid_from')::timestamp < current_timestamp )
+        AND ( current_setting('translation_proxy.promt.valid_until') IS NOT NULL
+          AND current_setting('translation_proxy.promt.valid_until')::timestamp > current_timestamp )
+        AND array_length( new_row_ids, 1 ) > 0 THEN
+    PERFORM _promt_start_translation();
   END IF;
-
-  INSERT INTO translation_proxy.cache ( source, target, q, result, created, api_engine, profile )
-    VALUES ( src, dst, qs, answer, now(), 'promt', profile );
-  RETURN answer;
+  -- all translations are in the cache table now
+  SELECT array_agg( result ) FROM cache WHERE id IN ( SELECT unnest( new_row_ids ) ) INTO r;
+  RETURN r;
 END;
-$$ LANGUAGE plpgsql;
+$BODY$ LANGUAGE plpgsql;
 
 -- text, returns language, saves to cache
 CREATE OR REPLACE FUNCTION translation_proxy._promt_detect_language(qs text)
@@ -172,7 +193,7 @@ BEGIN
   END IF;
   lng := translation_proxy._promt_detect_language(qs);
   IF lng <> '' THEN
-    INSERT INTO translation_proxy.detection_cache
+    INSERT INTO translation_proxy.cache
         ( lang, q, api_engine ) VALUES ( lng, qs, 'promt' );
   END IF;
   RETURN lng;

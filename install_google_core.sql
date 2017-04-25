@@ -22,7 +22,7 @@ RETURNS VOID AS $BODY$
   if answer_code != 200 :
     plpy.error( "Google returned %d", answer_code )
   try:
-    answer = json.loads( buffer.getvalue() )
+    answer = json.loads( buffer.getvalue() ) # json.load() won't work with StringIO
   except ValueError:
     plpy.error("Google was returned just a plain text. Maybe this is an error.", detail = buffer.getvalue() )
 
@@ -74,7 +74,7 @@ BEGIN
       WHEN sqlstate 'EOURL' THEN
         RAISE DEBUG 'EOURL on №%', onerec.id;
         IF url_base <> '' THEN
-          EXECUTE translation_proxy._google_fetch_translations( url_base, current_ids );
+          PERFORM translation_proxy._google_fetch_translations( url_base, current_ids );
         END IF;
         -- pushing the last request back to the url
         RAISE DEBUG 'pushing the last request back to the url';
@@ -92,7 +92,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql VOLATILE;
 
-
 -- main function, saves all requests to cache and initiates start_translation
 CREATE OR REPLACE FUNCTION translation_proxy.google_translate(
   src CHAR(2), dst CHAR(2), qs TEXT[], api_profile TEXT DEFAULT '')
@@ -100,6 +99,7 @@ RETURNS TEXT[] AS $$
 DECLARE
     new_row_ids BIGINT[]; -- saving here rows that needs translation
     can_remote BOOLEAN DEFAULT 'f';
+    r TEXT[];
 BEGIN
   SET SCHEMA 'translation_proxy';
   IF src = dst THEN
@@ -110,22 +110,25 @@ BEGIN
   IF array_length(qs, 1) = 0 THEN
     RAISE EXCEPTION 'NEED SOMETHING TO TRANSLATE';
   END IF;
-  can_remote := ( current_setting('translation_proxy.google.begin_at') IS NOT NULL
-                  AND current_setting('translation_proxy.google.begin_at')::timestamp < current_timestamp )
-                OR ( current_setting('translation_proxy.google.end_at') IS NOT NULL
-                  AND current_setting('translation_proxy.google.end_at')::timestamp > current_timestamp );
   -- let google translates rows with NULL result
-  INSERT INTO translation_proxy.cache ( source, target, q, profile, api_engine )
-    ( SELECT src, dst, unnest(qs), api_profile, 'google' )
-    ON CONFLICT (md5(q), source, target, api_engine, profile) DO
-      UPDATE SET source = src
-        -- this is dirty hack doing nothing with table only for returning all requested ids
-  RETURNING id INTO new_row_ids;
-  IF can_remote AND array_length( new_row_ids, 1 ) > 0 THEN
-    EXECUTE _google_fetch_translations();
+  WITH created( saved_ids ) AS (
+    INSERT INTO translation_proxy.cache ( source, target, q, profile, api_engine )
+      ( SELECT src, dst, unnest(qs), api_profile, 'google' )
+      ON CONFLICT (md5(q), source, target, api_engine, profile) DO
+        UPDATE SET source = src
+          -- this is dirty hack doing nothing with table only for returning all requested ids
+    RETURNING id )
+    SELECT array_agg( saved_ids ) FROM created INTO new_row_ids;
+  IF ( current_setting('translation_proxy.google.begin_at') IS NOT NULL
+          AND current_setting('translation_proxy.google.begin_at')::timestamp < current_timestamp )
+        AND ( current_setting('translation_proxy.google.end_at') IS NOT NULL
+          AND current_setting('translation_proxy.google.end_at')::timestamp > current_timestamp )
+        AND array_length( new_row_ids, 1 ) > 0 THEN
+    PERFORM _google_start_translation();
   END IF;
   -- all translations are in the cache table now
-  SELECT result FROM cache WHERE id IN ( new_row_ids );
+  SELECT array_agg( result ) FROM cache WHERE id IN ( SELECT unnest( new_row_ids ) ) INTO r;
+  RETURN r;
 END;
 $$ LANGUAGE plpgsql;
 
