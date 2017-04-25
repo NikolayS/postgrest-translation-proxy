@@ -3,71 +3,53 @@ alter database DBNAME set translation_proxy.google.api_key = 'YOUR_GOOGLE_API_KE
 alter database DBNAME set translation_proxy.google.begin_at = 'GOOGLE_BEGIN_AT';
 alter database DBNAME set translation_proxy.google.end_at = 'GOOGLE_END_AT';
 
--- fetches translations, listed in URL, and returns them as JSON
-CREATE OR REPLACE FUNCTION translation_proxy._google_fetch_translations( url TEXT )
-RETURNS JSONB AS $$
+-- fetches translations, listed in URL and saves them into cache
+CREATE OR REPLACE FUNCTION translation_proxy._google_fetch_translations( url TEXT, ids BIGINT[] )
+RETURNS VOID AS $BODY$
   import pycurl
   from StringIO import StringIO
   from urllib import urlencode
   import json
+  import re
 
-  api_key = plpy.execute("SELECT translation_proxy._load_cookie('google')")[0]['_load_cookie']
   buffer = StringIO()
   curl = pycurl.Curl()
   curl.setopt( pycurl.WRITEDATA, buffer )
   curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
-  curl.setopt( pycurl.VERBOSE, 1 )
   curl.setopt( pycurl.URL, url )
   curl.perform()
   answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
   if answer_code != 200 :
     plpy.error( "Google returned %d", answer_code )
   try:
-    answer = json.load(buffer)
+    answer = json.loads( buffer.getvalue() )
   except ValueError:
-    plpy.error('Google was returned just a plain text. Maybe this is an error.')
+    plpy.error("Google was returned just a plain text. Maybe this is an error.", detail = buffer.getvalue() )
+
   buffer.close()
   curl.close()
-  return answer
-$$ LANGUAGE plpython2u;
-
--- receives partial translation fetched from API and saves them into cache
-CREATE OR REPLACE FUNCTION translation_proxy._google_save_translations( ids BIGSERIAL[], answer JSON )
-RETURNS JSON AS $BODY$
-DECLARE
-  i INT4 0;
-  j INT4 0;
-  x BIGSERIAL;
-  r RECORD;
-BEGIN
---  IF answer->'data'->'translations'->0->'translatedText' IS NOT NULL THEN
--- loop over inserted IDS exactly in the same order
-  FOR x IN ids LOOP
-    IF ( SELECT result FROM translation_proxy.cache
-            WHERE id = x AND result IS NULL ) IS NULL THEN
-
-    IF ( SELECT result FROM translation_proxy.cache WHERE id = ids[i] ) IS NOT NULL THEN
-      UPDATE translation_proxy.cache
-        SET result = regexp_replace(( json_array_elements( answer->'data'->'translations'[i] ))::text, '"$|^"', '', 'g')
-        WHERE id = ids[i];
-    END IF;
-    i := i + 1;
-  END LOOP;
-end if;
-
-END;
-$BODY$ LANGUAGE plpgsql;
+  i = 0
+  update_plan = plpy.prepare( """
+    UPDATE translation_proxy.cache SET result = $1, encoded = NULL WHERE id = $2
+  """, [ 'TEXT', 'BIGINT' ] )
+  for x in answer['data']['translations'] :
+    t = re.sub( r'^"|"$', '', x['translatedText'] )
+    plpy.execute( update_plan, [ t, ids[i] ] )
+    i += 1
+  return None
+$BODY$ LANGUAGE plpython2u;
 
 -- initiate translation of all fields where result is NULL
 CREATE OR REPLACE FUNCTION translation_proxy._google_start_translation()
 RETURNS VOID AS $$
 DECLARE
-  onecursor refcursor;
   onerec RECORD;
-  url_base TEXT;
-  src TEXT;
-  dst TEXT;
-  prf TEXT;
+  url_base TEXT DEFAULT '';
+  src TEXT DEFAULT '';
+  dst TEXT DEFAULT '';
+  prf TEXT DEFAULT '';
+  current_ids BIGINT[] DEFAULT ARRAY[]::BIGINT[]; -- ids, currently added to url
+  cookie TEXT;
 BEGIN
   FOR onerec IN SELECT id, source, target, q, profile
     FROM translation_proxy.cache
@@ -75,45 +57,49 @@ BEGIN
     ORDER BY source, target, profile
     FOR UPDATE SKIP LOCKED
   LOOP
-      BEGIN
-        RAISE DEBUG 'onerec.id is %', onerec.id;
-        IF onerec.source <> src OR onerec.target <> dst OR onerec.profile <> prf THEN
-          src = onerec.source; dst = onerec.target; prf = onerec.profile;
-          RAISE EXCEPTION USING
-            errcode = 'EOURL',
-            message = 'Parameters are changed, time to fetch ' || onerec.id;
+    BEGIN
+      RAISE DEBUG 'onerec.id is %', onerec.id;
+      IF onerec.source <> src OR onerec.target <> dst OR onerec.profile <> prf THEN
+        RAISE DEBUG 'Parameters was changed, escaping. source is %, target is %', onerec.source, onerec.target;
+        src = onerec.source; dst = onerec.target; prf = onerec.profile;
+        RAISE EXCEPTION USING
+          errcode = 'EOURL',
+          message = 'Parameters are changed, time to fetch ' || onerec.id;
+      END IF;
+      RAISE DEBUG 'Adding more requests to url, №%', onerec.id;
+      url_base := translation_proxy._urladd( (url_base || '&q='), onerec.q );
+      current_ids := array_append( current_ids, onerec.id );
+      RAISE DEBUG 'Added id %, and continuing with url %', onerec.id, url_base;
+    EXCEPTION
+      WHEN sqlstate 'EOURL' THEN
+        RAISE DEBUG 'EOURL on №%', onerec.id;
+        IF url_base <> '' THEN
+          EXECUTE translation_proxy._google_fetch_translations( url_base, current_ids );
         END IF;
-        url_base := translation_proxy._urladd( url_base + '&q=', onerec.q );
-        RAISE DEBUG 'Continue with url %', url_base;
-      EXCEPTION
-        WHEN sqlstate 'EOURL' THEN
-          RAISE DEBUG 'Overflow on №%', onerec.id;
-          IF url_base <> '' THEN
-            EXECUTE translation_proxy._google_parse_answer(
-
-                translation_proxy._google_fetch_translations( url_base )
-            );
-          END IF;
-          url_base := translation_proxy._urladd( 'https://www.googleapis.com/language/translate/v2?key=' ||
-                translation_proxy._load_cookie( 'google' ) ||
-                '&target=' || onerec.target ||
-                '&source=' || onerec.source ||
-                '&q=', onerec.q );
-      END;
-      RAISE DEBUG 'Still upgrading url with №%', onerec.id;
+        -- pushing the last request back to the url
+        RAISE DEBUG 'pushing the last request back to the url';
+        current_ids := ARRAY[ onerec.id ];
+        SELECT 'https://www.googleapis.com/language/translate/v2?key=' ||
+                    current_setting('translation_proxy.google.api_key') ||
+                    '&target=' || onerec.target ||
+                    '&source=' || onerec.source ||
+                    '&q=' || translation_proxy._urlencode( onerec.q ) INTO url_base;
+        -- here it will translate even long string, one-by-one.
+        RAISE DEBUG 'Inside exception, url_base == %', url_base;
+    END;
   END LOOP;
-  RAISE DEBUG '--- EL';
   RETURN;
 END;
 $$ LANGUAGE plpgsql VOLATILE;
+
 
 -- main function, saves all requests to cache and initiates start_translation
 CREATE OR REPLACE FUNCTION translation_proxy.google_translate(
   src CHAR(2), dst CHAR(2), qs TEXT[], api_profile TEXT DEFAULT '')
 RETURNS TEXT[] AS $$
 DECLARE
-    new_row_ids BIGSERIAL[]; -- saving here rows that needs translation
-    can_remote BOOLEAN 'f';
+    new_row_ids BIGINT[]; -- saving here rows that needs translation
+    can_remote BOOLEAN DEFAULT 'f';
 BEGIN
   SET SCHEMA 'translation_proxy';
   IF src = dst THEN
@@ -129,18 +115,17 @@ BEGIN
                 OR ( current_setting('translation_proxy.google.end_at') IS NOT NULL
                   AND current_setting('translation_proxy.google.end_at')::timestamp > current_timestamp );
   -- let google translates rows with NULL result
-  new_row_ids :=
-      INSERT INTO cache (source, target, q, result, api_engine )
-        SELECT src, dst, unnest(qs), api_profile, 'google'
-          ON CONFLICT (md5(q), source, target, api_engine, profile) DO
-            UPDATE SET source = src ON
-            -- this is dirty hack doing nothing with table only for returning all requested ids
-      RETURNING id;
+  INSERT INTO translation_proxy.cache ( source, target, q, profile, api_engine )
+    ( SELECT src, dst, unnest(qs), api_profile, 'google' )
+    ON CONFLICT (md5(q), source, target, api_engine, profile) DO
+      UPDATE SET source = src
+        -- this is dirty hack doing nothing with table only for returning all requested ids
+  RETURNING id INTO new_row_ids;
   IF can_remote AND array_length( new_row_ids, 1 ) > 0 THEN
     EXECUTE _google_fetch_translations();
   END IF;
-  -- all translations are in cache table now
-  RETURN SELECT result FROM cache WHERE id IN ( new_row_ids );
+  -- all translations are in the cache table now
+  SELECT result FROM cache WHERE id IN ( new_row_ids );
 END;
 $$ LANGUAGE plpgsql;
 
