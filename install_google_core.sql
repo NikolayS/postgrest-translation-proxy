@@ -4,39 +4,64 @@ alter database DBNAME set translation_proxy.google.begin_at = 'GOOGLE_BEGIN_AT';
 alter database DBNAME set translation_proxy.google.end_at = 'GOOGLE_END_AT';
 
 -- fetches translations, listed in URL and saves them into cache
-CREATE OR REPLACE FUNCTION translation_proxy._google_fetch_translations( url TEXT, ids BIGINT[] )
+-- stores current request into local session cache (SD) and calls API only on overflow
+-- must be called once more after the loop with id = nil to (possibly) flush the cache
+CREATE OR REPLACE FUNCTION translation_proxy._google_fetch_translations( id BIGINT, source TEXT, target TEXT, q TEXT )
 RETURNS VOID AS $BODY$
   import pycurl
   from StringIO import StringIO
-  from urllib import urlencode
+  from urllib import quote_plus
   import json
   import re
 
-  buffer = StringIO()
-  curl = pycurl.Curl()
-  curl.setopt( pycurl.WRITEDATA, buffer )
-  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
-  curl.setopt( pycurl.URL, url )
-  curl.perform()
-  answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
-  if answer_code != 200 :
-    plpy.error( "Google returned %d", answer_code )
-  try:
-    answer = json.loads( buffer.getvalue() ) # json.load() won't work with StringIO
-  except ValueError:
-    plpy.error("Google was returned just a plain text. Maybe this is an error.", detail = buffer.getvalue() )
+  if id and target and q:
+    if not SD['data']:
+      plpy.debug('Promt: init SD')
+      SD['url'] = SD['url'] = 'https://www.googleapis.com/language/translate/v2?key=' +
+        plpy.execute("current_setting('translation_proxy.google.api_key')")[0]['current_setting'] +
+        '&target=' + target + '&source=' + onerec.source
+      SD['data'] = []
 
-  buffer.close()
-  curl.close()
-  i = 0
-  update_plan = plpy.prepare( """
-    UPDATE translation_proxy.cache SET result = $1, encoded = NULL WHERE id = $2
-  """, [ 'TEXT', 'BIGINT' ] )
-  for x in answer['data']['translations'] :
-    t = re.sub( r'^"|"$', '', x['translatedText'] )
-    plpy.execute( update_plan, [ t, ids[i] ] )
-    i += 1
-  return None
+    SD['url'] += '&text=' + quote_plus (q)
+    SD['data'].append( [{ 'id': id, 'source': source, 'target': target, 'q': q }] )
+
+    if len( SD['url'] ) < 1980 and SD['data'][0]['source'] == source and SD['data'][0]['target'] == target:
+      return None;
+
+  if SD['data'] and SD['url']:
+    plpy.debug('Fetching google, url is %s' % SD['url'])
+    buffer = StringIO()
+    curl = pycurl.Curl()
+    curl.setopt( pycurl.WRITEDATA, buffer )
+    curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
+    curl.setopt( pycurl.URL, SD['url'] )
+    curl.perform()
+    answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
+    if answer_code != 200 :
+      plpy.error( "Google returned %d", answer_code )
+    try:
+      answer = json.loads( buffer.getvalue() )
+    except ValueError:
+      buffer.close()
+      curl.close()
+      plpy.error("Google was returned just a plain text. Maybe this is an error.", detail = buffer.getvalue() )
+
+    buffer.close()
+    curl.close()
+    i = 0
+    update_plan = plpy.prepare( "UPDATE translation_proxy.cache SET result = $1, encoded = NULL WHERE id = $2",
+        [ 'TEXT', 'BIGINT' ] )
+    for x in answer['data']['translations'] :
+      plpy.debug("Google translated for id №%d : '%s'", ( SD['data'][i]['id'], x['translatedText'] ))
+      t = re.sub( r'^"|"$', '', x['translatedText'] )
+      plpy.execute( update_plan, [ t, SD['data'][i]['id'] ] )
+      i += 1
+
+    plpy.debug('Clearing SD')
+    SD['url'] = ''
+    SD['data'] = []
+
+    return None
 $BODY$ LANGUAGE plpython2u;
 
 -- initiate translation of all fields where result is NULL
@@ -49,7 +74,6 @@ DECLARE
   dst TEXT DEFAULT '';
   prf TEXT DEFAULT '';
   current_ids BIGINT[] DEFAULT ARRAY[]::BIGINT[]; -- ids, currently added to url
-  cookie TEXT;
 BEGIN
   FOR onerec IN SELECT id, source, target, q, profile
     FROM translation_proxy.cache
