@@ -1,0 +1,24 @@
+---
+:global:
+  :use: true
+  :database: translation_proxy
+  :host: null
+  :port: null
+  :username: postgres
+  :password: null
+:google:
+  :use: false
+  :api_key: null
+  :begin_at: 2017-04-07
+  :end_at: 2018-04-07
+:promt:
+  :use: false
+  :login: null
+  :password: null
+  :login_timeout: 30 minutes
+  :server_url: https://pts.promt.com/pts
+  :cookie_file: /tmp/promt_cookie.jar
+:bing:
+  :use: false
+  :api_key_1: null
+  :api_key_2: null

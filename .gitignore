@@ -1,1 +1,3 @@
 *.swp
+*~
+/setup.yml
