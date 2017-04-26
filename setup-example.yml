@@ -16,7 +16,7 @@
   :login: null
   :password: null
   :login_timeout: 30 minutes
-  :server_url: https://pts.promt.com/pts
+  :server_url: http://pts.promt.com/pts
   :cookie_file: /tmp/promt_cookie.jar
 :bing:
   :use: false
