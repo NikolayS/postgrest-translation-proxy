@@ -6,6 +6,11 @@
   :port: null
   :username: postgres
   :password: null
+:api:
+  :user: apiuser
+  :password: null
+  :schema: postgrest_v2
+  :current_engine: :promt
 :google:
   :use: false
   :api_key: null
