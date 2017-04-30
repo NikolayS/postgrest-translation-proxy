@@ -55,8 +55,8 @@ class Setup
   def setup_google
     puts "\t\t ==== Setup Google API"
     @psql.write @@cfg[:google][:script].gsub( /YOUR_GOOGLE_API_KEY/, @@cfg[:google][:api_key] )
-                .gsub( /GOOGLE_BEGIN_AT/, @@cfg[:google][:begin_at].to_s )
-                .gsub( /GOOGLE_END_AT/, @@cfg[:google][:end_at].to_s ) + "\n"
+                .gsub( /GOOGLE_VALID_FROM/, @@cfg[:google][:valid_from].to_s )
+                .gsub( /GOOGLE_VALID_UNTIL/, @@cfg[:google][:valid_until].to_s ) + "\n"
   end
 
   def setup_promt

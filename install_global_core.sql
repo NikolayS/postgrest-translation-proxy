@@ -18,7 +18,7 @@ CREATE TABLE translation_proxy.cache(
 
 CREATE UNIQUE INDEX u_cache_q_source_target ON translation_proxy.cache
     USING btree(md5(q), source, target, api_engine, profile);
-
+CREATE INDEX cache_created ON translation_proxy.cache ( created );
 COMMENT ON TABLE translation_proxy.cache IS 'The cache for API calls of the Translation proxy';
 
 -- trigger, that URLencodes query in cache, when no translation is given

@@ -1,7 +1,7 @@
 -- Google API
-alter database DBNAME set translation_proxy.google.api_key = 'YOUR_GOOGLE_API_KEY';
-alter database DBNAME set translation_proxy.google.begin_at = 'GOOGLE_BEGIN_AT';
-alter database DBNAME set translation_proxy.google.end_at = 'GOOGLE_END_AT';
+ALTER DATABASE DBNAME SET translation_proxy.google.api_key = 'YOUR_GOOGLE_API_KEY';
+ALTER DATABASE DBNAME SET translation_proxy.google.valid_from = 'GOOGLE_VALID_FROM';
+ALTER DATABASE DBNAME SET translation_proxy.google.valid_until = 'GOOGLE_VALID_UNTIL';
 
 -- fetches translations, listed in URL and saves them into cache
 -- stores current request into local session cache (SD) and calls API only on overflow
@@ -143,10 +143,10 @@ BEGIN
           -- this is dirty hack doing nothing with table only for returning all requested ids
     RETURNING id )
     SELECT array_agg( saved_ids ) FROM created INTO new_row_ids;
-  IF ( current_setting('translation_proxy.google.begin_at') IS NOT NULL
-          AND current_setting('translation_proxy.google.begin_at')::timestamp < current_timestamp )
-        AND ( current_setting('translation_proxy.google.end_at') IS NOT NULL
-          AND current_setting('translation_proxy.google.end_at')::timestamp > current_timestamp )
+  IF ( current_setting('translation_proxy.google.valid_from') IS NOT NULL
+          AND current_setting('translation_proxy.google.valid_from')::timestamp < current_timestamp )
+        AND ( current_setting('translation_proxy.google.valid_until') IS NOT NULL
+          AND current_setting('translation_proxy.google.valid_until')::timestamp > current_timestamp )
         AND array_length( new_row_ids, 1 ) > 0 THEN
     PERFORM _google_start_translation();
   END IF;

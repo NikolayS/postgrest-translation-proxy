@@ -1,4 +1,4 @@
-alter database DBNAME set translation_proxy.api.current_engine = 'CURRENT_API_ENGINE'
+ALTER DATABASE DBNAME SET translation_proxy.api.current_engine = 'CURRENT_API_ENGINE'
 
 CREATE SCHEMA IF NOT EXISTS 'API_SCHEMA_NAME';
 DO

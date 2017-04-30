@@ -14,8 +14,8 @@
 :google:
   :use: false
   :api_key: null
-  :begin_at: 2017-04-07
-  :end_at: 2018-04-07
+  :valid_from: 2017-04-07
+  :valid_until: 2018-04-07
 :promt:
   :use: false
   :login: null
@@ -29,3 +29,5 @@
   :use: false
   :api_key: null
   :token_expiration: 10 minutes
+  :valid_from: 2017-04-07
+  :valid_until: 2018-04-07
