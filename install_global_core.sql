@@ -13,7 +13,7 @@ CREATE TABLE translation_proxy.cache(
     profile TEXT NOT NULL DEFAULT '',
     created TIMESTAMP NOT NULL DEFAULT now(),
     api_engine translation_proxy.api_engine_type NOT NULL,
-    encoded TEXT    -- urlencoded string for GET request. Will clear that field after an successfull translation.
+    encoded TEXT    -- urlencoded string for GET request. Is null after an successfull translation.
 );
 
 CREATE UNIQUE INDEX u_cache_q_source_target ON translation_proxy.cache

@@ -36,13 +36,11 @@ class Setup
 
   def setup_api
     api_code = File.read('install_api.sql')
-    api_code.gsub!
-    api_code.gsub!
     @psql = IO::popen( [ 'psql', @@cfg[:global][:database] ], 'w' )
     @psql.write api_code.gsub( /APIUSER-PASSWORD/, @@cfg[:api][:password] )
         .gsub( /API_SCHEMA_NAME/, @@cfg[:api][:schema] )
         .gsub( /API_USERNAME/, @@cfg[:api][:user] )
-        .gsub( /CURRENT_API_ENGINE/, @@cfg[:api][:current_engine] )
+        .gsub( /CURRENT_API_ENGINE/, @@cfg[:api][:current_engine].to_s )
     @psql.close
     self
   end
