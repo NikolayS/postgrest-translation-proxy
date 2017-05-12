@@ -1,12 +1,4 @@
 -- there are dragons! Drop them with caution!
-revoke execute on function v1.google_translate(char, char, text) from apiuser;
-revoke execute on function v1.google_translate_array(char, char, json) from apiuser;
-
-revoke execute on function v1.promt_translate(char, char, text) from apiuser;
-revoke execute on function v1.promt_translate_array(char, char, json) from apiuser;
-
-revoke execute on function v1.bing_translate(char, char, text) from apiuser;
-revoke execute on function v1.bing_translate_array(char, char, json) from apiuser;
 
 DROP FUNCTION IF EXISTS v1.google_translate(char, char, text);
 DROP FUNCTION IF EXISTS v1.google_translate_array(char, char, json);
@@ -20,7 +12,6 @@ DROP FUNCTION IF EXISTS v1.bing_translate_array(char, char, json);
 -- drop schema v1 cascade;
 -- drop role apiuser;
 
-revoke execute on function v2.translate_array(CHAR(2), CHAR(2), JSON)
 DROP FUNCTION IF EXISTS v2.translate_array(CHAR(2), CHAR(2), JSON)
 
 -- REVOKE USAGE ON SCHEMA v2 FROM apiuser;
