@@ -1,2 +1,1 @@
-DROP SCHEMA IF EXISTS google_translate CASCADE;
-DROP SCHEMA IF EXISTS translation_proxy CASCADE;
+drop schema google_translate cascade;
