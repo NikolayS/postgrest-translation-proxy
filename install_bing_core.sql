@@ -1,7 +1,3 @@
--- Microsoft Bing
-ALTER DATABASE DBNAME SET translation_proxy.bing.api_key = 'YOUR_BING_API_KEY';
-ALTER DATABASE DBNAME SET translation_proxy.bing.key_expiration = 'BING_TOKEN_EXPIRATION';
-
 -- main function is the bing_translate( source char(2), target char(2), qs text[] )
 
 -- api_key

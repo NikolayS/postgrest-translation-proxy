@@ -19,9 +19,11 @@ class Setup
   def setup_core
     # Global setup
     [:global, :google, :promt, :bing].each do |engine|
-      filename = "install_#{ engine }_core.sql"
-      @@cfg[engine][:script] = File.read(filename)
-        .gsub( ' DBNAME ', " #{ @@cfg[:global][:database] } ")
+      vars   = "install_#{ engine }_vars.sql"
+      script = "install_#{ engine }_core.sql"
+      @@cfg[engine][:script] =
+        File.read(vars).gsub( ' DBNAME ', " #{ @@cfg[:global][:database] } ") + "\n" +
+        File.read(script).gsub( ' DBNAME ', " #{ @@cfg[:global][:database] } ")
     end
     ENV['PGPASSWORD'] = @@cfg[:global][:password] unless @@cfg[:global][:password].nil?
     ENV['PGUSER'] = @@cfg[:global][:username] unless @@cfg[:global][:username].nil?
@@ -35,9 +37,11 @@ class Setup
   end
 
   def setup_api
-    api_code = File.read('install_api.sql')
+    puts "\t\t ==== API v2 features"
+    api_code = File.read('install_api_vars.sql') + File.read('install_api.sql')
     @psql = IO::popen( [ 'psql', @@cfg[:global][:database] ], 'w' )
-    @psql.write api_code.gsub( /APIUSER-PASSWORD/, @@cfg[:api][:password] )
+    @psql.write api_code.gsub( /DBNAME/, @@cfg[:global][:database])
+        .gsub( /APIUSER-PASSWORD/, @@cfg[:api][:password] )
         .gsub( /API_SCHEMA_NAME/, @@cfg[:api][:schema] )
         .gsub( /API_USERNAME/, @@cfg[:api][:user] )
         .gsub( /CURRENT_API_ENGINE/, @@cfg[:api][:current_engine].to_s )

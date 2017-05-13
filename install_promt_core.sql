@@ -1,12 +1,3 @@
--- Promt API
-ALTER DATABASE DBNAME SET translation_proxy.promt.login = 'YOUR_PROMT_LOGIN';
-ALTER DATABASE DBNAME SET translation_proxy.promt.password = 'YOUR_PROMT_PASSWORD';
-ALTER DATABASE DBNAME SET translation_proxy.promt.server_url = 'YOUR_PROMT_SERVER_URL';
-ALTER DATABASE DBNAME SET translation_proxy.promt.login_timeout = 'PROMT_LOGIN_TIMEOUT';
-ALTER DATABASE DBNAME SET translation_proxy.promt.cookie_file = 'PROMT_COOKIE_FILE';
-ALTER DATABASE DBNAME SET translation_proxy.promt.valid_from = 'PROMT_KEY_VALID_FROM';
-ALTER DATABASE DBNAME SET translation_proxy.promt.valid_until = 'PROMT_KEY_VALID_UNTIL';
-
 -- Main function is the promt_translate( source, destination, query[], profile )
 /* Overview:
   0. insert received text to cache table where result is NULL
@@ -111,8 +102,9 @@ RETURNS VOID AS $$
 $$ language plpython2u;
 
 -- from, to, text[], profile
-CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(
-    src char(2), dst char(2), qs text[], api_profile text DEFAULT '') RETURNS TEXT[] AS $BODY$
+CREATE OR REPLACE FUNCTION translation_proxy.promt_translate_array(
+    src CHAR(2), dst CHAR(2), qs TEXT[], api_profile TEXT DEFAULT '')
+RETURNS TEXT[] AS $BODY$
 DECLARE
   new_row_ids BIGINT[]; -- saving here rows that needs translation
   r TEXT[];
@@ -144,6 +136,13 @@ BEGIN
   -- all translations are in the cache table now
   SELECT array_agg( result ) FROM cache WHERE id IN ( SELECT unnest( new_row_ids ) ) INTO r;
   RETURN r;
+END;
+$BODY$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(
+    src CHAR(2), dst CHAR(2), qs TEXT, api_profile text DEFAULT '') RETURNS TEXT[] AS $BODY$
+BEGIN
+  SELECT translation_proxy.promt_translate_array( src, dst, ARRAY[qs], api_profile);
 END;
 $BODY$ LANGUAGE plpgsql;
 

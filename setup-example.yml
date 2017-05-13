@@ -1,33 +1,36 @@
 ---
 :global:
   :use: true
-  :database: translation_proxy
+  :database: DBNAME
   :host: null
   :port: null
   :username: postgres
   :password: null
 :api:
   :user: apiuser
-  :password: null
-  :schema: postgrest_v2
+  :password: APIUSER-PASSWORD
+  :schema: v2
   :current_engine: :promt
 :google:
-  :use: false
-  :api_key: null
+  :use: true
+  :api_key: GOOGLE_API_KEY
   :valid_from: 2017-04-07
   :valid_until: 2018-04-07
 :promt:
-  :use: false
-  :login: null
-  :password: null
+  :use: true
+  :login: PROMT_LOGIN
+  :password: PROMT_PASSWORD
   :login_timeout: 30 minutes
   :server_url: https://pts.promt.com/pts
   :cookie_file: /tmp/promt_cookie.jar
   :valid_from: 2017-04-07
   :valid_until: 2018-04-07
 :bing:
-  :use: false
-  :api_key: null
+  :use: true
+  :api_key: BING_TOKEN_1
+  :key2: BING_TOKEN_2
   :token_expiration: 10 minutes
+  :subscription_id: BING_SUBSCRIPTION_ID
+  :account_name: BING_ACC_NAME
   :valid_from: 2017-04-07
   :valid_until: 2018-04-07

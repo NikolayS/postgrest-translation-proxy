@@ -1,8 +1,3 @@
--- Google API
-ALTER DATABASE DBNAME SET translation_proxy.google.api_key = 'YOUR_GOOGLE_API_KEY';
-ALTER DATABASE DBNAME SET translation_proxy.google.valid_from = 'GOOGLE_VALID_FROM';
-ALTER DATABASE DBNAME SET translation_proxy.google.valid_until = 'GOOGLE_VALID_UNTIL';
-
 -- fetches translations, listed in URL and saves them into cache
 -- stores current request into local session cache (SD) and calls API only on overflow
 -- must be called once more after the loop with id = nil to (possibly) flush the cache
@@ -17,9 +12,7 @@ RETURNS VOID AS $BODY$
   if id and target and q:
     if not SD['data']:
       plpy.debug('Promt: init SD')
-      SD['url'] = SD['url'] = 'https://www.googleapis.com/language/translate/v2?key=' +
-        plpy.execute("current_setting('translation_proxy.google.api_key')")[0]['current_setting'] +
-        '&target=' + target + '&source=' + onerec.source
+      SD['url'] = 'https://www.googleapis.com/language/translate/v2?key=' + plpy.execute("current_setting('translation_proxy.google.api_key')")[0]['current_setting'] + '&target=' + target + '&source=' + source
       SD['data'] = []
 
     SD['url'] += '&text=' + quote_plus (q)
