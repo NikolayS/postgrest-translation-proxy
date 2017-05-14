@@ -15,51 +15,69 @@ end
 
 require 'yaml'
 class Setup
-  def setup
-    @cfg = YAML.load_file 'setup.yml'
+  @@cfg = YAML.load_file 'setup.yml'
+  def setup_core
     # Global setup
     [:global, :google, :promt, :bing].each do |engine|
-      filename = "install_#{ engine }_core.sql"
-      @cfg[engine][:script] = File.read(filename)
-        .gsub( ' DBNAME ', " #{ @cfg[:global][:database] } ")
+      vars   = "install_#{ engine }_vars.sql"
+      script = "install_#{ engine }_core.sql"
+      @@cfg[engine][:script] =
+        File.read(vars).gsub( ' DBNAME ', " #{ @@cfg[:global][:database] } ") + "\n" +
+        File.read(script).gsub( ' DBNAME ', " #{ @@cfg[:global][:database] } ")
     end
-    ENV['PGPASSWORD'] = @cfg[:global][:password] unless @cfg[:global][:password].nil?
-    ENV['PGUSER'] = @cfg[:global][:username] unless @cfg[:global][:username].nil?
-    @psql = IO::popen("psql #{ @cfg[:global][:database] }", 'w')
+    ENV['PGPASSWORD'] = @@cfg[:global][:password] unless @@cfg[:global][:password].nil?
+    ENV['PGUSER'] = @@cfg[:global][:username] unless @@cfg[:global][:username].nil?
     # @psql = File.open '/tmp/setup-script.sql', 'w'
     [:global, :google, :promt, :bing].each do |engine|
-      self.send( "setup_#{ engine }" ) if @cfg[engine][:use]
+      @psql = IO::popen( [ 'psql', @@cfg[:global][:database] ], 'w' )
+      self.send( "setup_#{ engine }" ) if @@cfg[engine][:use]
+      @psql.close
     end
+    self
+  end
+
+  def setup_api
+    puts "\t\t ==== API v2 features"
+    api_code = File.read('install_api_vars.sql') + File.read('install_api.sql')
+    @psql = IO::popen( [ 'psql', @@cfg[:global][:database] ], 'w' )
+    @psql.write api_code.gsub( /DBNAME/, @@cfg[:global][:database])
+        .gsub( /APIUSER-PASSWORD/, @@cfg[:api][:password] )
+        .gsub( /API_SCHEMA_NAME/, @@cfg[:api][:schema] )
+        .gsub( /API_USERNAME/, @@cfg[:api][:user] )
+        .gsub( /CURRENT_API_ENGINE/, @@cfg[:api][:current_engine].to_s )
     @psql.close
+    self
   end
 
   def setup_global
-    puts 'Core features'
-    @psql.puts @cfg[:global][:script]
+    puts "\t\t ==== Core features"
+    @psql.write @@cfg[:global][:script] + "\n"
   end
 
   def setup_google
-    puts "Setup Google API"
-    @psql.puts @cfg[:google][:script]
-                .gsub( /YOUR_GOOGLE_API_KEY/, @cfg[:google][:api_key] )
-                .gsub( /GOOGLE_BEGIN_AT/, @cfg[:google][:begin_at].to_s )
-                .gsub( /GOOGLE_END_AT/, @cfg[:google][:end_at].to_s )
+    puts "\t\t ==== Setup Google API"
+    @psql.write @@cfg[:google][:script].gsub( /YOUR_GOOGLE_API_KEY/, @@cfg[:google][:api_key] )
+                .gsub( /GOOGLE_VALID_FROM/, @@cfg[:google][:valid_from].to_s )
+                .gsub( /GOOGLE_VALID_UNTIL/, @@cfg[:google][:valid_until].to_s ) + "\n"
   end
 
   def setup_promt
-    puts "Setup Promt API"
-    @psql.puts @cfg[:promt][:script].gsub(/YOUR_PROMT_LOGIN/, @cfg[:promt][:login] )
-      .gsub( /YOUR_PROMT_PASSWORD/, @cfg[:promt][:password] )
-      .gsub( /YOUR_PROMT_SERVER_URL/, @cfg[:promt][:server_url] )
-      .gsub( /PROMT_LOGIN_TIMEOUT/, @cfg[:promt][:login_timeout] )
-      .gsub( /PROMT_COOKIE_FILE/, @cfg[:promt][:cookie_file])
+    puts "\t\t ==== Setup Promt API"
+    @psql.write @@cfg[:promt][:script].gsub(/YOUR_PROMT_LOGIN/, @@cfg[:promt][:login] )
+                  .gsub( /YOUR_PROMT_PASSWORD/, @@cfg[:promt][:password] )
+                  .gsub( /YOUR_PROMT_SERVER_URL/, @@cfg[:promt][:server_url] )
+                  .gsub( /PROMT_LOGIN_TIMEOUT/, @@cfg[:promt][:login_timeout] )
+                  .gsub( /PROMT_COOKIE_FILE/, @@cfg[:promt][:cookie_file])
+                  .gsub( /PROMT_KEY_VALID_FROM/, @@cfg[:promt][:valid_from].to_s )
+                  .gsub( /PROMT_KEY_VALID_UNTIL/, @@cfg[:promt][:valid_until].to_s ) + "\n"
   end
 
   def setup_bing
-    puts "Setup MS Bing API"
-    @psql.puts @cfg[:bing][:script]
+    puts "\t\t ==== Setup MS Bing API"
+    @psql.write @@cfg[:bing][:script].gsub( /YOUR_BING_API_KEY/, @@cfg[:bing][:api_key] )
+                  .gsub( /BING_TOKEN_EXPIRATION/, @@cfg[:bing][:token_expiration] ) + "\n"
   end
 
 end
 
-Setup.new.setup
+Setup.new.setup_core.setup_api
