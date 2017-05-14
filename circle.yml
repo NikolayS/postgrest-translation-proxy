@@ -24,9 +24,9 @@ database:
             background: true 
 test:
     override:
-        - ~/postgrest-google-translate/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
+        - ~/"$CIRCLE_PROJECT_REPONAME"/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
         - nc -z -v -w5 localhost 3000
-        - newman run ~/postgrest-google-translate/test/postman/postgrest-google-translate.postman_collection --bail -e ~/postgrest-google-translate/test/postman/local.postman_environment --reporter-junit-export $CIRCLE_TEST_REPORTS/newman.xml
-        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/postgrest-google-translate/uninstall_api.sql
-        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/postgrest-google-translate/uninstall_core.sql
+        - newman run ~/"$CIRCLE_PROJECT_REPONAME"/test/postman/postgrest-google-translate.postman_collection --bail -e ~/postgrest-google-translate/test/postman/local.postman_environment --reporter-junit-export $CIRCLE_TEST_REPORTS/newman.xml
+        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/"$CIRCLE_PROJECT_REPONAME"/uninstall_api.sql
+        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/"$CIRCLE_PROJECT_REPONAME"/uninstall_core.sql
 
