@@ -1,15 +1,17 @@
-create schema if not exists v2;
-do
-$$
-begin
-   if not exists (
-      select *
-      from   pg_catalog.pg_user
-      where  usename = 'apiuser'
-    ) then
-      create role apiuser password 'pass-for-apiuser' login;
-   end if;
-end
-$$;
+CREATE OR REPLACE FUNCTION v2.translate_array(source CHAR(2), target CHAR(2), q JSON)
+RETURNS TEXT[] AS $BODY$
+DECLARE
+  rez TEXT[];
+BEGIN
+  SELECT
+    CASE current_setting('translation_proxy.api.current_engine')
+      WHEN 'google' THEN
+        translation_proxy.google_translate_array( source, target, q )
+      WHEN 'promt' THEN
+        translation_proxy.promt_translate_array( source, target, array_agg( json_array_elements_text(q) ) )
+    END INTO rez;
+    RETURN rez;
+END;
+$BODY$ LANGUAGE PLPGSQL SECURITY DEFINER;
 
-grant usage on schema v2 to apiuser;
+GRANT EXECUTE ON FUNCTION v2.translate_array(CHAR(2), CHAR(2), JSON) TO apiuser;
