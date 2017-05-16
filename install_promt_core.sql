@@ -9,6 +9,7 @@
 
 -- Dumb functions for login, logout, translate and detect lnaguage
 -- authorizes on Promt API, writes cookie to db and returns it (or NULL) for next queries
+-- curl -X POST -d 'username=startupturbo' -d 'password=Startupturb0' -d 'isPersistent=false' https://nombox.csd.promt.ru/pts/Services/auth/rest.svc/Login
 CREATE OR REPLACE FUNCTION translation_proxy._promt_login() RETURNS TEXT AS $$
   import pycurl
   from StringIO import StringIO

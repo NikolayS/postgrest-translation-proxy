@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION v2.translate_array(source CHAR(2), target CHAR(2), q JSON)
+CREATE OR REPLACE FUNCTION v1.translate_array(source CHAR(2), target CHAR(2), q JSON)
 RETURNS TEXT[] AS $BODY$
 DECLARE
   rez TEXT[];
@@ -14,4 +14,4 @@ BEGIN
 END;
 $BODY$ LANGUAGE PLPGSQL SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION v2.translate_array(CHAR(2), CHAR(2), JSON) TO apiuser;
+GRANT EXECUTE ON FUNCTION v1.translate_array(CHAR(2), CHAR(2), JSON) TO apiuser;
