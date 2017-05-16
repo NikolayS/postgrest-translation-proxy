@@ -31,6 +31,8 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_login() RETURNS TEXT AS $$
   curl = pycurl.Curl()
   curl.setopt( curl.URL, server_url )
   curl.setopt( pycurl.HTTPHEADER, ['Accept: application/json', 'Content-Type: application/json'] )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.setopt( pycurl.POST, 1 )
   curl.setopt( pycurl.POSTFIELDS,
     json.dumps(
@@ -66,6 +68,8 @@ RETURNS VOID AS $$
 
   curl = pycurl.Curl()
   curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.setopt( pycurl.COOKIELIST, cookie )
   cursor = plpy.cursor( """
     SELECT id, source, target, q, profile
@@ -163,6 +167,8 @@ RETURNS CHAR(10) AS $$
   curl.setopt( pycurl.URL, server_url + '?' + urlencode({ 'text': qs } ))
   curl.setopt( pycurl.WRITEDATA, buffer )
   curl.setopt( pycurl.COOKIELIST, cookie )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.perform()
   answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
   curl.close()
@@ -215,6 +221,8 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_logout() RETURNS BOOLEAN AS 
 
   curl = pycurl.Curl()
   curl.setopt( pycurl.URL, server_url )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.setopt( pycurl.WRITEDATA, buffer )
   curl.setopt( pycurl.COOKIELIST, cookie )
   curl.perform()
