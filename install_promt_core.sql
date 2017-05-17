@@ -64,12 +64,13 @@ RETURNS VOID AS $$
       "UPDATE translation_proxy.cache SET result = $1, encoded = NULL WHERE id = $2",
       [ 'text', 'bigint' ] )
   cookie = plpy.execute( "SELECT translation_proxy._promt_login()" )[0]['_promt_login']
-  server_url = plpy.execute( "SELECT current_setting('translation_proxy.promt.server_url')" )[0]['current_setting'] + '/Services/v1/rest.svc/TranslateText?'
+  server_url = plpy.execute( "SELECT current_setting('translation_proxy.promt.server_url')" )[0]['current_setting'] + '/Services/v1/rest.svc/TranslateText'
 
   curl = pycurl.Curl()
-  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
-  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json', 'Content-Type: application/json' ] )
+  curl.setopt( pycurl.SSL_VERIFYPEER, 0)
   # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
+  curl.setopt( pycurl.POST, 1 )
   curl.setopt( pycurl.COOKIELIST, cookie )
   cursor = plpy.cursor( """
     SELECT id, source, target, q, profile
@@ -85,12 +86,13 @@ RETURNS VOID AS $$
       break
     buffer = StringIO()
     curl.setopt( pycurl.WRITEDATA, buffer )
-    curl.setopt( pycurl.URL, server_url +
-        urlencode({ 'from': row[0]['source'],
-          'to': row[0]['target'],
-          'text': row[0]['q'],
-          'profile': row[0]['profile'] }) )
+    curl.setopt( pycurl.URL, server_url )
+    j = json.dumps({ 'from': row[0]['source'], 'to': row[0]['target'], 'text': row[0]['q'], 'profile': row[0]['profile'] })
+    output = StringIO(j)
+    curl.setopt( pycurl.POSTFIELDSIZE, output.len )
+    curl.setopt( pycurl.READDATA, output )
     curl.perform()
+    output.close()
     answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
     if answer_code != 200 :
       plpy.error( "Promt API returned %s\nBody is: %s" % ( answer_code, buffer.getvalue() ))
