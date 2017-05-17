@@ -8,7 +8,7 @@ BEGIN
       WHEN 'google' THEN
         translation_proxy.google_translate_array( source, target, q )
       WHEN 'promt' THEN
-        translation_proxy.promt_translate_array( source, target, array_agg( json_array_elements_text(q) ) )
+        translation_proxy.promt_translate_array( source, target, ARRAY( SELECT json_array_elements_text(q) ) )
     END INTO rez;
     RETURN rez;
 END;

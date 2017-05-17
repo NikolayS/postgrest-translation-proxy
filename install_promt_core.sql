@@ -145,7 +145,8 @@ END;
 $BODY$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(
-    src CHAR(2), dst CHAR(2), qs TEXT, api_profile text DEFAULT '') RETURNS TEXT[] AS $BODY$
+    src CHAR(2), dst CHAR(2), qs TEXT, api_profile text DEFAULT '')
+RETURNS TEXT[] AS $BODY$
 BEGIN
   SELECT translation_proxy.promt_translate_array( src, dst, ARRAY[qs], api_profile);
 END;
