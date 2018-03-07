@@ -9,25 +9,24 @@ dependencies:
         - cd ~ && wget https://github.com/begriffs/postgrest/releases/download/v0.3.2.0/postgrest-0.3.2.0-ubuntu.tar.xz
         - cd ~ && tar xf postgrest-0.3.2.0-ubuntu.tar.xz
         - echo "~/postgrest postgres://apiuser:SOMEPASSWORD@localhost:5432/test --pool=200 --anonymous=apiuser --port=3000 --jwt-secret notverysecret --max-rows=500 --schema=v1" > ~/postgrest-run.sh && chmod a+x ~/postgrest-run.sh
-        - npm install -g npm newman ava
+        - npm install -g npm newman 
 database:
     override:
         - sudo -u postgres psql -c "create role apiuser password 'SOMEPASSWORD' login;"
         - sudo -u postgres psql -c "create database test;"
-        - sudo -u postgres psql -c "alter database test set translation_proxy.google_api_key = 'AIzaSyCauv2HRjprFX3DcGhorJFYGyeVmzvunuc';"
-        - sudo -u postgres psql -c "alter database test set translation_proxy.google_begin_at = '2000-01-01';"
-        - sudo -u postgres psql -c "alter database test set translation_proxy.google_end_at = '2100-01-01'"
+        - sudo -u postgres psql -c "alter database test set google_translate.api_key = 'AIzaSyCauv2HRjprFX3DcGhorJFYGyeVmzvunuc';"
+        - sudo -u postgres psql -c "alter database test set google_translate.begin_at = '2000-01-01';"
+        - sudo -u postgres psql -c "alter database test set google_translate.end_at = '2100-01-01'"
         - sudo -u postgres psql test -c "create extension if not exists plsh;"
-        - sudo -u postgres psql test -f ~/postgrest-translation-proxy/install_google_core.sql
-        - sudo -u postgres psql test -f ~/postgrest-translation-proxy/install_promt_core.sql
-        - sudo -u postgres psql test -f ~/postgrest-translation-proxy/install_bing_core.sql
-        - sudo -u postgres psql test -f ~/postgrest-translation-proxy/install_api.sql
+        - sudo -u postgres psql test -f ~/postgrest-google-translate/install_core.sql
+        - sudo -u postgres psql test -f ~/postgrest-google-translate/install_api.sql
         - ~/postgrest-run.sh:
-            background: true
+            background: true 
 test:
     override:
-        - ~/postgrest-translation-proxy/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
+        - ~/"$CIRCLE_PROJECT_REPONAME"/test/run.sh -f junit >$CIRCLE_TEST_REPORTS/junit.xml
         - nc -z -v -w5 localhost 3000
-        - newman run ~/postgrest-translation-proxy/test/postman/postgrest-translation-proxy.postman_collection --bail -e ~/postgrest-translation-proxy/test/postman/local.postman_environment --reporter-junit-export $CIRCLE_TEST_REPORTS/newman.xml
-        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/postgrest-translation-proxy/uninstall_api.sql
-        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/postgrest-translation-proxy/uninstall_core.sql
+        - newman run ~/"$CIRCLE_PROJECT_REPONAME"/test/postman/postgrest-google-translate.postman_collection --bail -e ~/postgrest-google-translate/test/postman/local.postman_environment --reporter-junit-export $CIRCLE_TEST_REPORTS/newman.xml
+        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/"$CIRCLE_PROJECT_REPONAME"/uninstall_api.sql
+        - sudo -u postgres psql test -v ON_ERROR_STOP=1 -f ~/"$CIRCLE_PROJECT_REPONAME"/uninstall_core.sql
+
