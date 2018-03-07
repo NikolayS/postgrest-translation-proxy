@@ -1,6 +1,3 @@
-DROP FUNCTION IF EXISTS v1.google_translate(char, char, text);
-DROP FUNCTION IF EXISTS v1.google_translate_array(char, char, json);
-
 DROP FUNCTION IF EXISTS v1.promt_translate(char, char, text);
 DROP FUNCTION IF EXISTS v1.promt_translate_array(char, char, json);
 
