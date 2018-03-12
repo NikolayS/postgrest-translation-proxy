@@ -21,11 +21,27 @@ CREATE UNIQUE INDEX u_cache_q_source_target ON translation_proxy.cache
 CREATE INDEX cache_created ON translation_proxy.cache ( created );
 COMMENT ON TABLE translation_proxy.cache IS 'The cache for API calls of the Translation proxy';
 
+--- Disclaimer: this urlencode is unusual -- it doesn't touch most chars (incl. multibytes)
+--- to avoid reaching 2K limit for URL in Google API calls.
+--- "Regular" urlencode() with multibyte chars support is shown above (commented out block of code).
 -- trigger, that URLencodes query in cache, when no translation is given
 CREATE OR REPLACE FUNCTION translation_proxy._urlencode_fields()
 RETURNS TRIGGER AS $BODY$
-  from urllib import quote_plus
-  TD['new']['encoded'] =  quote_plus( TD['new']['q'] )
+  import StringIO
+  body = unicode(TD['new']['q'], 'utf-8')
+  o = StringIO.StringIO()
+  for c in body:
+    if c in u"+\]\[%&#\n\r":
+      o.write('%%%s' % c.encode('hex').upper())
+    elif ord(c) in ( range(0x7f,0xa5) + [0xa0] ):
+      o.write('+')
+    elif ord(c) in range(0x00,0x19):
+      continue
+    else:
+      o.write(c)
+
+  TD['new']['encoded'] = o.getvalue()
+  o.close()
   return 'MODIFY'
 $BODY$ LANGUAGE plpython2u;
 
@@ -86,7 +102,21 @@ $$ LANGUAGE plpgsql;
 -- adding new parameter to url until it exceeds the limit of 2000 bytes
 CREATE OR REPLACE FUNCTION translation_proxy._urladd( url TEXT, a TEXT ) RETURNS TEXT AS $$
   from urllib import quote_plus
-  r = url + quote_plus( a )
+  import StringIO
+  body = unicode(a, 'utf-8')
+  o = StringIO.StringIO()
+  for c in body:
+    if c in u"+\]\[%&#\n\r":
+      o.write('%%%s' % c.encode('hex').upper())
+    elif ord(c) in ( range(0x7f,0xa5) + [0xa0] ):
+      o.write('+')
+    elif ord(c) in range(0x00,0x19):
+      continue
+    else:
+      o.write(c)
+
+  r = url + o.getvalue()
+  o.close()
   if len(r) > 1999 :
     plpy.error('URL length is over, time to fetch.', sqlstate = 'EOURL')
   return r
@@ -95,6 +125,19 @@ $$ LANGUAGE plpython2u;
 -- urlencoding utility
 CREATE OR REPLACE FUNCTION translation_proxy._urlencode(q TEXT)
 RETURNS TEXT AS $BODY$
-  from urllib import quote_plus
-  return quote_plus( q )
+import StringIO
+body = unicode(q, 'utf-8')
+o = StringIO.StringIO()
+for c in body:
+  if c in u"+\]\[%&#\n\r":
+    o.write('%%%s' % c.encode('hex').upper())
+  elif ord(c) in ( range(0x7f,0xa5) + [0xa0] ):
+    o.write('+')
+  elif ord(c) in range(0x00,0x19):
+    continue
+  else:
+    o.write(c)
+  body = o.getvalue()
+  o.close()
+  return body
 $BODY$ LANGUAGE plpython2u;

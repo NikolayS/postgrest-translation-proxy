@@ -9,6 +9,7 @@
 
 -- Dumb functions for login, logout, translate and detect lnaguage
 -- authorizes on Promt API, writes cookie to db and returns it (or NULL) for next queries
+-- curl -X POST -d 'username=startupturbo' -d 'password=Startupturb0' -d 'isPersistent=false' https://nombox.csd.promt.ru/pts/Services/auth/rest.svc/Login
 CREATE OR REPLACE FUNCTION translation_proxy._promt_login() RETURNS TEXT AS $$
   import pycurl
   from StringIO import StringIO
@@ -30,6 +31,8 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_login() RETURNS TEXT AS $$
   curl = pycurl.Curl()
   curl.setopt( curl.URL, server_url )
   curl.setopt( pycurl.HTTPHEADER, ['Accept: application/json', 'Content-Type: application/json'] )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.setopt( pycurl.POST, 1 )
   curl.setopt( pycurl.POSTFIELDS,
     json.dumps(
@@ -61,10 +64,13 @@ RETURNS VOID AS $$
       "UPDATE translation_proxy.cache SET result = $1, encoded = NULL WHERE id = $2",
       [ 'text', 'bigint' ] )
   cookie = plpy.execute( "SELECT translation_proxy._promt_login()" )[0]['_promt_login']
-  server_url = plpy.execute( "SELECT current_setting('translation_proxy.promt.server_url')" )[0]['current_setting'] + '/Services/v1/rest.svc/TranslateText?'
+  server_url = plpy.execute( "SELECT current_setting('translation_proxy.promt.server_url')" )[0]['current_setting'] + '/Services/v1/rest.svc/TranslateText'
 
   curl = pycurl.Curl()
-  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json' ] )
+  curl.setopt( pycurl.HTTPHEADER, [ 'Accept: application/json', 'Content-Type: application/json' ] )
+  curl.setopt( pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
+  curl.setopt( pycurl.POST, 1 )
   curl.setopt( pycurl.COOKIELIST, cookie )
   cursor = plpy.cursor( """
     SELECT id, source, target, q, profile
@@ -80,12 +86,13 @@ RETURNS VOID AS $$
       break
     buffer = StringIO()
     curl.setopt( pycurl.WRITEDATA, buffer )
-    curl.setopt( pycurl.URL, server_url +
-        urlencode({ 'from': row[0]['source'],
-          'to': row[0]['target'],
-          'text': row[0]['q'],
-          'profile': row[0]['profile'] }) )
+    curl.setopt( pycurl.URL, server_url )
+    j = json.dumps({ 'from': row[0]['source'], 'to': row[0]['target'], 'text': row[0]['q'], 'profile': row[0]['profile'] })
+    output = StringIO(j)
+    curl.setopt( pycurl.POSTFIELDSIZE, output.len )
+    curl.setopt( pycurl.READDATA, output )
     curl.perform()
+    output.close()
     answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
     if answer_code != 200 :
       plpy.error( "Promt API returned %s\nBody is: %s" % ( answer_code, buffer.getvalue() ))
@@ -140,7 +147,8 @@ END;
 $BODY$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION translation_proxy.promt_translate(
-    src CHAR(2), dst CHAR(2), qs TEXT, api_profile text DEFAULT '') RETURNS TEXT[] AS $BODY$
+    src CHAR(2), dst CHAR(2), qs TEXT, api_profile text DEFAULT '')
+RETURNS TEXT[] AS $BODY$
 BEGIN
   SELECT translation_proxy.promt_translate_array( src, dst, ARRAY[qs], api_profile);
 END;
@@ -162,6 +170,8 @@ RETURNS CHAR(10) AS $$
   curl.setopt( pycurl.URL, server_url + '?' + urlencode({ 'text': qs } ))
   curl.setopt( pycurl.WRITEDATA, buffer )
   curl.setopt( pycurl.COOKIELIST, cookie )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.perform()
   answer_code = curl.getinfo( pycurl.RESPONSE_CODE )
   curl.close()
@@ -214,6 +224,8 @@ CREATE OR REPLACE FUNCTION translation_proxy._promt_logout() RETURNS BOOLEAN AS 
 
   curl = pycurl.Curl()
   curl.setopt( pycurl.URL, server_url )
+  curl.setopt(pycurl.SSL_VERIFYPEER, 0)
+  # curl.setopt(pycurl.SSL_VERIFYHOST, 0)
   curl.setopt( pycurl.WRITEDATA, buffer )
   curl.setopt( pycurl.COOKIELIST, cookie )
   curl.perform()
